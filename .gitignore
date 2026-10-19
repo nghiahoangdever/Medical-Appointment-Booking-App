@@ -1,0 +1,18 @@
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Environment
+.env
+!.env.example
+
+# SQLite databases
+server/prisma/*.db
+server/prisma/*.db-journal
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

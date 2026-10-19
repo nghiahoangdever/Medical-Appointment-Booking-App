@@ -1,0 +1,137 @@
+// MediSchedule data model — mirrors the class diagram.
+//
+// SQLite has no native enums, so enum-like columns are Strings whose allowed
+// values live in src/domain/enums.ts. Calendar dates are "YYYY-MM-DD" strings
+// and shift times are "HH:mm" strings (single clinic timezone, no TZ bugs).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  fullName     String
+  email        String   @unique
+  phone        String   @unique
+  passwordHash String
+  role         String // Role: PATIENT | RECEPTIONIST | DOCTOR | ADMIN
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  patientProfile        PatientProfile?
+  doctor                Doctor?
+  appointments          Appointment[]     @relation("PatientAppointments")
+  cancelledAppointments Appointment[]     @relation("CancelledBy")
+  notes                 AppointmentNote[]
+}
+
+model PatientProfile {
+  userId      Int     @id
+  dateOfBirth String // YYYY-MM-DD
+  gender      String // Gender: MALE | FEMALE | OTHER
+  address     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Doctor {
+  id          Int     @id @default(autoincrement())
+  userId      Int     @unique
+  specialtyId Int
+  title       String // e.g. "MD", "Assoc. Prof."
+  bio         String?
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialty     Specialty     @relation(fields: [specialtyId], references: [id])
+  rosterEntries RosterEntry[]
+}
+
+model Specialty {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  isActive    Boolean @default(true)
+
+  doctors Doctor[]
+}
+
+model Room {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique // e.g. "B2-05"
+  name     String
+  floor    String?
+  isActive Boolean @default(true)
+
+  rosterEntries RosterEntry[]
+}
+
+model Shift {
+  id        Int    @id @default(autoincrement())
+  name      String @unique // fixed: "Morning", "Afternoon"
+  startTime String // HH:mm
+  endTime   String // HH:mm
+
+  rosterEntries RosterEntry[]
+}
+
+// One doctor on duty in one room for one shift on one date.
+model RosterEntry {
+  id              Int    @id @default(autoincrement())
+  doctorId        Int
+  roomId          Int
+  shiftId         Int
+  date            String // YYYY-MM-DD
+  maxPatients     Int
+  nextQueueNumber Int    @default(1) // never reused, even after cancellations
+
+  doctor       Doctor        @relation(fields: [doctorId], references: [id])
+  room         Room          @relation(fields: [roomId], references: [id])
+  shift        Shift         @relation(fields: [shiftId], references: [id])
+  appointments Appointment[]
+
+  @@unique([doctorId, date, shiftId]) // a doctor can't be in two places
+  @@unique([roomId, date, shiftId]) // a room can't host two doctors
+  @@index([date])
+}
+
+model Appointment {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique // e.g. "AP-7K3QXM"
+  patientId     Int
+  rosterEntryId Int
+  queueNumber   Int
+  status        String // AppointmentStatus
+  reason        String? // reason for visit, entered by the patient
+  bookedAt      DateTime  @default(now())
+  checkedInAt   DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  cancelledById Int?
+  cancelReason  String?
+
+  patient     User              @relation("PatientAppointments", fields: [patientId], references: [id])
+  rosterEntry RosterEntry       @relation(fields: [rosterEntryId], references: [id])
+  cancelledBy User?             @relation("CancelledBy", fields: [cancelledById], references: [id])
+  notes       AppointmentNote[]
+
+  @@unique([rosterEntryId, queueNumber])
+  @@index([patientId])
+  @@index([status])
+}
+
+model AppointmentNote {
+  id            Int      @id @default(autoincrement())
+  appointmentId Int
+  authorId      Int
+  content       String
+  createdAt     DateTime @default(now())
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  author      User        @relation(fields: [authorId], references: [id])
+}
