@@ -9,8 +9,8 @@ import { RefreshButton } from '../../components/RefreshButton';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { PageSpinner } from '../../components/ui/PageSpinner';
+import { LoadError } from '../../components/LoadError';
 import { useApi } from '../../hooks/useApi';
-import { errorMessage } from '../../i18n/errors';
 import { todayIso } from '../../lib/date';
 import type { Appointment, AppointmentStatus } from '../../types';
 
@@ -72,7 +72,7 @@ export function MyAppointmentsPage() {
       )}
 
       {error && !data ? (
-        <Alert>{errorMessage(error)}</Alert>
+        <LoadError error={error} onRetry={() => void refresh()} />
       ) : !data ? (
         <PageSpinner />
       ) : shown.length === 0 ? (

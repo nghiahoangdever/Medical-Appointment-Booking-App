@@ -120,7 +120,8 @@ Never change or assume otherwise without asking the user:
 - Phase 3 – Reception (day list + filters, search, check-in, no-show, staff cancel, notes, patient details, `allowedActions`, dev simulated clock): **done**.
 - Phase 4 – Doctor queue (duty schedule, shift queue, call next, start, complete, doctor no-show + notes, ownership and one-patient-per-doctor guards, 15 s polling; desktop-only scope): **done**.
 - Phase 5 – Admin (specialties, rooms, doctor/receptionist accounts with activate/deactivate, shift times, weekly roster editor with conflict/capacity/delete rules, copy previous week, all-appointments overview, account-active check on every request): **done**. Known limitation: a booked shift can't be reassigned to another doctor.
-- **Next: Phase 6 – Polish**: error/empty states, end-to-end API tests, README design map. Mobile is out of scope.
+- Phase 6 – Polish (retryable error + empty states, error boundary, session-ended message, `e2e.flow.test.ts`, PlantUML in `docs/uml/`, README design map + known limitations): **done**. Mobile is out of scope.
+- **All phases (0–6) are done.** Further work (see README "Known limitations" / "Future work") needs a new `feature/…` branch and the user's go-ahead.
 
 ## 7. Additional Documentation
 
@@ -131,3 +132,4 @@ Never change or assume otherwise without asking the user:
 - [.claude/docs/date_logic.md](.claude/docs/date_logic.md): read before any date/time comparison, display, or time-dependent test.
 - [.claude/docs/i18n_and_errors.md](.claude/docs/i18n_and_errors.md): read before adding UI text, an error code, or a validation rule.
 - [.claude/docs/design_mapping.md](.claude/docs/design_mapping.md): read before starting a phase and after any design change (use cases, classes, states, sequences → code; change log).
+- `docs/uml/*.puml`: the UML diagrams as PlantUML. Keep them in step with the code when a design change touches them.

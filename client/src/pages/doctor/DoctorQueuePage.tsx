@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router';
 import { doctorApi } from '../../api/doctor';
 import { AppointmentCard } from '../../components/AppointmentCard';
 import { AppointmentNotes } from '../../components/AppointmentNotes';
+import { LoadError } from '../../components/LoadError';
 import { PageHeader } from '../../components/PageHeader';
 import { PatientInfo } from '../../components/PatientInfo';
 import { RefreshButton } from '../../components/RefreshButton';
@@ -57,7 +58,7 @@ export function DoctorQueuePage() {
     return (
       <>
         <BackLink />
-        <Alert>{errorMessage(error)}</Alert>
+        <LoadError error={error} onRetry={() => void refresh()} />
       </>
     );
   }
@@ -102,7 +103,7 @@ export function DoctorQueuePage() {
       )}
       {error !== null && (
         <div className="mb-4">
-          <Alert>{errorMessage(error)}</Alert>
+          <LoadError error={error} onRetry={() => void refresh()} />
         </div>
       )}
 

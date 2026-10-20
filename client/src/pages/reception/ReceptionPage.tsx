@@ -14,7 +14,7 @@ import { Button } from '../../components/ui/Button';
 import { SelectField, TextField } from '../../components/ui/FormField';
 import { PageSpinner } from '../../components/ui/PageSpinner';
 import { useApi } from '../../hooks/useApi';
-import { errorMessage } from '../../i18n/errors';
+import { LoadError } from '../../components/LoadError';
 import { doctorName, shiftLabel } from '../../i18n/labels';
 import { formatDateLong, todayIso } from '../../lib/date';
 import type { AppointmentStatus, StaffAppointment, StaffAppointmentFilters } from '../../types';
@@ -179,7 +179,7 @@ export function ReceptionPage({
       )}
       {error !== null && (
         <div className="mb-4">
-          <Alert>{errorMessage(error)}</Alert>
+          <LoadError error={error} onRetry={() => void refresh()} />
         </div>
       )}
 

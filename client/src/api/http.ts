@@ -22,10 +22,14 @@ export class ApiError extends Error {
   }
 }
 
-let onUnauthorized: (() => void) | null = null;
+type UnauthorizedHandler = (code: string) => void;
+let onUnauthorized: UnauthorizedHandler | null = null;
 
-/** Called when a logged-in request gets 401 (token expired) or ACCOUNT_DISABLED (deactivated). */
-export function setUnauthorizedHandler(handler: (() => void) | null) {
+/**
+ * Called when a logged-in request gets 401 (token expired/invalid) or ACCOUNT_DISABLED
+ * (deactivated), with the error code.
+ */
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
   onUnauthorized = handler;
 }
 
@@ -50,7 +54,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (!res.ok) {
     const err = data?.error;
     // The session is over: token expired/invalid, or the account was deactivated meanwhile.
-    if (token && (res.status === 401 || err?.code === 'ACCOUNT_DISABLED')) onUnauthorized?.();
+    if (token && (res.status === 401 || err?.code === 'ACCOUNT_DISABLED')) {
+      onUnauthorized?.(err?.code ?? 'INVALID_TOKEN');
+    }
     throw new ApiError(
       res.status,
       err?.code ?? (res.status >= 500 ? 'INTERNAL_ERROR' : 'UNKNOWN_ERROR'),

@@ -16,7 +16,7 @@ const MESSAGES: Record<string, string> = {
   NOT_AUTHENTICATED: 'Vui lòng đăng nhập để tiếp tục.',
   INVALID_TOKEN: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
   INVALID_CREDENTIALS: 'Email/số điện thoại hoặc mật khẩu không đúng.',
-  ACCOUNT_DISABLED: 'Tài khoản này đã bị vô hiệu hóa.',
+  ACCOUNT_DISABLED: 'Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên phòng khám.',
   EMAIL_TAKEN: 'Email này đã được sử dụng.',
   PHONE_TAKEN: 'Số điện thoại này đã được sử dụng.',
 

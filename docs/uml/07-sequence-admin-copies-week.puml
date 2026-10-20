@@ -1,0 +1,84 @@
+@startuml sequence-admin-copies-week
+' MediSchedule: UC-A7 "Admin copies the previous week's roster" (extends UC-A6).
+' Names match the code and .claude/docs/design_mapping.md.
+
+title Sequence: Admin copies the previous week's roster
+autonumber
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+
+actor Admin
+participant "RosterPage\n(RosterGrid, CopySummary)" as UI
+participant "adminApi\n(api/http.ts)" as Api
+participant "authenticate +\nrequireRole(ADMIN)" as Auth
+participant "RosterController" as Ctrl
+participant "RosterService" as Svc
+participant "RosterRules\n(domain)" as Rules
+participant "RosterRepository" as RosterRepo
+participant "DoctorRepository" as DoctorRepo
+participant "RoomRepository" as RoomRepo
+participant "ShiftRepository" as ShiftRepo
+database "SQLite" as DB
+
+== Load the target week (UC-A6) ==
+Admin -> UI : open "Lịch trực theo tuần", go to the target week
+UI -> Api : adminApi.rosterWeek(weekStart)
+Api -> Auth : GET /api/admin/roster?weekStart=<Monday>
+Auth -> Ctrl : week(req, res)
+Ctrl -> Svc : getWeek(weekStart)
+Svc -> RosterRepo : findForWeek(weekStart, weekStart + 6)
+Svc -> RoomRepo : findAll()
+Svc -> ShiftRepo : findAll()
+Svc -> DoctorRepo : findAllAccounts()
+Svc -> Rules : rosterDateFailure(day) per day,\nrosterPermissions(facts) per entry
+Svc --> UI : 200 { weekStart, weekEnd, days, shifts, rooms, doctors, entries }
+
+== Copy previous week (UC-A7) ==
+Admin -> UI : "Sao chép tuần trước" → confirm
+UI -> Api : adminApi.copyPreviousWeek(weekStart)
+Api -> Auth : POST /api/admin/roster/copy-previous-week { weekStart }
+Auth -> Ctrl : copyPreviousWeek(req, res)
+Ctrl -> Ctrl : zod: weekStart is a Monday
+alt not a Monday
+  Ctrl --> UI : 400 VALIDATION_ERROR (WEEK_START_NOT_MONDAY)
+end
+Ctrl -> Svc : copyPreviousWeek(weekStart)
+
+group runInTransaction
+  Svc -> RosterRepo : findForWeek(weekStart − 7, weekStart − 1, tx)
+  RosterRepo -> DB
+  loop each source entry
+    Svc -> Svc : target = same doctor, room, shift, maxPatients;\ndate + 7 days
+    Svc -> Rules : rosterDateFailure(target.date, now)
+    opt date not in the past
+      Svc -> Svc : placementFailure(target, tx)
+      activate Svc
+      Svc -> DoctorRepo : findAccountById(doctorId, tx)
+      note right : DOCTOR_NOT_FOUND / DOCTOR_INACTIVE
+      Svc -> RoomRepo : findById(roomId, tx)
+      note right : ROOM_NOT_FOUND / ROOM_INACTIVE
+      Svc -> ShiftRepo : findById(shiftId, tx)
+      note right : SHIFT_NOT_FOUND
+      Svc -> RosterRepo : findBySlot({ doctorId, date, shiftId }, tx)
+      note right : ROSTER_DOCTOR_CONFLICT
+      Svc -> RosterRepo : findBySlot({ roomId, date, shiftId }, tx)
+      note right : ROSTER_ROOM_CONFLICT
+      deactivate Svc
+    end
+    alt no failure
+      Svc -> RosterRepo : create(target, tx)
+      RosterRepo -> DB
+      Svc -> Svc : created++
+    else failure
+      Svc -> Svc : skipped.push({ sourceEntryId, date, shiftId, roomId,\ndoctorName, reason: error code })
+    end
+  end
+end
+
+Svc --> Ctrl : { sourceWeekStart, created, skipped }
+Ctrl --> UI : 200
+UI --> Admin : CopySummary: "Đã sao chép n ca trực …",\nskipped items with translated reasons
+UI -> Api : refresh → GET /api/admin/roster?weekStart=…
+note right : the grid reloads with the new entries
+
+@enduml

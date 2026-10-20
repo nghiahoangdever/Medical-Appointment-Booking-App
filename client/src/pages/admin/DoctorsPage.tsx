@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { adminApi } from '../../api/admin';
+import { LoadError } from '../../components/LoadError';
 import { PageHeader } from '../../components/PageHeader';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
@@ -11,7 +12,7 @@ import { useSubmit } from '../../hooks/useSubmit';
 import { errorMessage, fieldErrorMessages } from '../../i18n/errors';
 import { doctorName } from '../../i18n/labels';
 import type { AdminDoctor } from '../../types';
-import { ActiveBadge, ListWithForm, RowAction, Td, Th } from './shared';
+import { ActiveBadge, EmptyRow, ListWithForm, RowAction, Td, Th } from './shared';
 
 const EMPTY = {
   fullName: '',
@@ -77,7 +78,7 @@ export function DoctorsPage() {
     void refresh();
   }
 
-  if (error !== null && !data) return <Alert>{errorMessage(error)}</Alert>;
+  if (error !== null && !data) return <LoadError error={error} onRetry={() => void refresh()} />;
   if (!data) return <PageSpinner />;
   const [{ doctors }, { specialties }] = data;
 
@@ -110,6 +111,12 @@ export function DoctorsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
+              {doctors.length === 0 && (
+                <EmptyRow
+                  colSpan={5}
+                  message="Chưa có bác sĩ nào. Thêm bác sĩ ở biểu mẫu bên phải."
+                />
+              )}
               {doctors.map((d) => (
                 <tr key={d.id} className={editing?.id === d.id ? 'bg-teal-50/50' : undefined}>
                   <Td className="font-medium">{doctorName(d)}</Td>

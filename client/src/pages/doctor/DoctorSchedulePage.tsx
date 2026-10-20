@@ -3,11 +3,10 @@ import { Link } from 'react-router';
 import { doctorApi } from '../../api/doctor';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
+import { LoadError } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
-import { Alert } from '../../components/ui/Alert';
 import { PageSpinner } from '../../components/ui/PageSpinner';
 import { useApi } from '../../hooks/useApi';
-import { errorMessage } from '../../i18n/errors';
 import { shiftLabel } from '../../i18n/labels';
 import { formatDateLong, todayIso } from '../../lib/date';
 import type { AppointmentStatus } from '../../types';
@@ -36,7 +35,7 @@ export function DoctorSchedulePage() {
       />
 
       {error !== null && !data ? (
-        <Alert>{errorMessage(error)}</Alert>
+        <LoadError error={error} onRetry={() => void refresh()} />
       ) : !data ? (
         <PageSpinner />
       ) : data.length === 0 ? (

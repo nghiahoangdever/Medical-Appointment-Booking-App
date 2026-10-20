@@ -1,9 +1,10 @@
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_HOME } from '../auth/roles';
 import { ROLE_LABEL } from '../i18n/labels';
 import type { Role } from '../types';
 import { DevClockBanner } from './DevClockBanner';
+import { ErrorBoundary } from './ErrorBoundary';
 import { Logo } from './Logo';
 
 // Each phase adds its pages here.
@@ -28,6 +29,7 @@ const NAV_ITEMS: Record<Role, { to: string; label: string }[]> = {
 /** App shell for logged-in pages. Rendered inside <ProtectedRoute>, so user is set. */
 export function Layout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   if (!user) return null;
 
   return (
@@ -59,7 +61,7 @@ export function Layout() {
             </span>
             <button
               type="button"
-              onClick={logout}
+              onClick={() => logout()}
               className="rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             >
               Đăng xuất
@@ -68,7 +70,10 @@ export function Layout() {
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <Outlet />
+        {/* Keyed by path so a crashed page recovers when the user navigates away. */}
+        <ErrorBoundary key={location.pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );
