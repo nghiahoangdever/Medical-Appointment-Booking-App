@@ -1,4 +1,4 @@
-@startuml use-cases
+@startuml
 ' MediSchedule: use case diagram. Matches .claude/docs/design_mapping.md
 ' ("Use cases -> endpoint -> service method"). UC-P8 (profile) is planned and not shown.
 
@@ -25,7 +25,7 @@ rectangle "MediSchedule" {
   usecase "Log out" as UC_Logout
   usecase "Validate status transition\n(state machine + guards)" as UC_Validate <<shared>>
 
-  package "Patient" {
+  package "Patient" as PkgPatient {
     usecase "UC-P1 Register account" as P1
     usecase "UC-P2 Browse specialties\nand doctors" as P2
     usecase "UC-P3 View availability" as P3
@@ -45,7 +45,7 @@ rectangle "MediSchedule" {
     usecase "UC-R7 Add note" as R7
   }
 
-  package "Doctor" {
+  package "Doctor" as PkgDoctor {
     usecase "UC-D1 View duty schedule" as D1
     usecase "UC-D2 View shift queue" as D2
     usecase "UC-D3 Call next patient" as D3
