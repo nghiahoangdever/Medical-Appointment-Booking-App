@@ -45,6 +45,14 @@ const MESSAGES: Record<string, string> = {
   CHECK_IN_SHIFT_ENDED: 'Ca khám đã kết thúc, không thể check-in.',
   NO_SHOW_TOO_EARLY: 'Chỉ có thể đánh dấu vắng mặt sau khi ca khám bắt đầu.',
 
+  // Doctor queue
+  NOT_YOUR_PATIENT: 'Bệnh nhân này không thuộc hàng đợi của bạn.',
+  EXAM_NOT_TODAY: 'Chỉ có thể bắt đầu khám vào đúng ngày khám.',
+  DOCTOR_BUSY:
+    'Bạn đang khám một bệnh nhân khác (có thể ở ca khác trong ngày). Vui lòng hoàn thành lượt khám đó trước.',
+  NO_PATIENT_WAITING: 'Chưa có bệnh nhân nào đang chờ (đã check-in).',
+  ROSTER_ENTRY_NOT_FOUND: 'Không tìm thấy ca trực.',
+
   // Form fields
   REQUIRED: 'Vui lòng nhập thông tin này.',
   INVALID_VALUE: 'Giá trị không hợp lệ.',

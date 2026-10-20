@@ -68,4 +68,12 @@ Wipes every table (children first) and resets ids, then creates: 1 admin, 2 rece
 
 ## Dev scenario seed (`server/prisma/seed-today.ts`, `npm run db:seed:today -w server`)
 
-Dev only (refuses `NODE_ENV=production`); run after the main seed. For **today** (any weekday): upserts Morning (max 10) and Afternoon (max 6) roster entries for doctor1 (room A1-01) and doctor3 (room A1-03), deletes those entries' appointments/notes and resets `nextQueueNumber` to 1, upserts patients 4–6 (`patient4@example.com`…, phones `091100000x`), then creates 11 appointments **through `BookingService` / `AppointmentService` with fixed clocks** (booked 06:00; check-ins 07:15 / 07:20 / 12:30; one patient cancel at 06:30; one note): 7 BOOKED, 3 CHECKED_IN, 1 CANCELLED. Idempotent for today's data.
+Dev only (refuses `NODE_ENV=production`); run after the main seed. For **today** (any weekday): upserts Morning (max 10) and Afternoon (max 6) roster entries for doctor1 (room A1-01) and doctor3 (room A1-03), deletes those entries' appointments/notes and resets `nextQueueNumber` to 1, upserts patients 4–8 (`patient4@example.com`…, phones `091100000x`). It then creates 13 appointments **through `BookingService` / `AppointmentService` with fixed clocks**:
+
+- bookings at 06:00;
+- check-ins between 07:15 and 12:45;
+- one patient cancel at 06:30;
+- doctor3 starts at 07:40 and completes at 07:55 for one patient, then starts the next at 07:56;
+- one reception note and one doctor note.
+
+Result: 6 BOOKED, 4 CHECKED_IN, 1 IN_EXAMINATION, 1 COMPLETED, 1 CANCELLED. Idempotent for today's data.

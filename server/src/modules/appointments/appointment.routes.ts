@@ -26,8 +26,17 @@ appointmentRouter.post(
   controller.cancel,
 );
 appointmentRouter.post('/:id/check-in', requireRole(Role.RECEPTIONIST), controller.checkIn);
-// DOCTOR joins in Phase 4, together with the "doctor owns the roster entry" guard.
-appointmentRouter.post('/:id/no-show', requireRole(Role.RECEPTIONIST), controller.markNoShow);
+appointmentRouter.post(
+  '/:id/no-show',
+  requireRole(Role.RECEPTIONIST, Role.DOCTOR),
+  controller.markNoShow,
+);
+appointmentRouter.post('/:id/start', requireRole(Role.DOCTOR), controller.start);
+appointmentRouter.post('/:id/complete', requireRole(Role.DOCTOR), controller.complete);
 
-// Notes (DOCTOR joins in Phase 4)
-appointmentRouter.post('/:id/notes', requireRole(Role.RECEPTIONIST), controller.addNote);
+// Internal notes (doctors: own queue only, enforced by AppointmentService visibility)
+appointmentRouter.post(
+  '/:id/notes',
+  requireRole(Role.RECEPTIONIST, Role.DOCTOR),
+  controller.addNote,
+);

@@ -4,6 +4,7 @@
 
 MediSchedule is an appointment booking web app for a multi-specialty clinic with four roles: Patient, Receptionist, Doctor, Admin. Patients book by specialty, optional doctor, date and shift and get an appointment code and queue number; reception checks them in and doctors work through their shift queue.
 It is a solo, **design-first** Software Analysis & Design course project: the code must mirror the UML use case, class, state and sequence diagrams. Design clarity beats feature count.
+It targets **desktop web browsers only (1280px wide and up)**; mobile and responsive layouts are out of scope.
 
 ## 2. Tech Stack
 
@@ -51,11 +52,11 @@ Run from the repo root unless noted.
 
 ### Simulated clock (dev only, for time-based rules)
 
-Use it to test check-in (only before shift end) and no-show (only after shift start) at any hour:
+Use it to test check-in (only before shift end), no-show (only after shift start) and the doctor queue at any hour:
 
-1. `npm run db:seed -w server` then `npm run db:seed:today -w server` (today's queues for doctor1 + doctor3).
+1. `npm run db:seed -w server` then `npm run db:seed:today -w server`. This gives today's queues for doctor1 and doctor3; doctor3's morning is mid-shift.
 2. Set `DEV_FAKE_NOW="09:00"` in `server/.env` and restart `npm run dev`. The server acts as if it were that time **today**, time keeps running, and the UI shows an amber banner.
-3. Try `06:00` (nothing started), `09:00` (morning running), `12:00` (morning ended), `18:00` (both ended). The expected buttons are in `.claude/docs/date_logic.md`.
+3. Reception: try `06:00` (nothing started), `09:00` (morning running), `12:00` (morning ended), `18:00` (both ended). Doctor (`doctor3@…`): try `07:00`, `09:00`, `12:50`, `18:00`. The expected buttons for each time are in `.claude/docs/date_logic.md`.
 4. Reset with `DEV_FAKE_NOW=""` and restart. Never commit `server/.env`. The server refuses the setting in production, and tests ignore it (they inject fixed clocks).
 
 ## 4. Core Logic Summary
@@ -66,7 +67,17 @@ Use it to test check-in (only before shift end) and no-show (only after shift st
 - **Doctor assignment**: no doctor chosen → the on-duty doctor of the specialty with free capacity and the fewest active bookings; tie → lowest doctor id.
 - **Booking**: one transaction; window is today + 13 days; started shifts can't be booked; one active appointment per patient per date + shift.
 - **State machine**: `BOOKED → CHECKED_IN → IN_EXAMINATION → COMPLETED`, alternative endings `CANCELLED`, `NO_SHOW`. Every change goes through `transition()` in `server/src/domain/appointmentStateMachine.ts`.
-- **Guards** (`server/src/domain/appointmentRules.ts`): check-in only on the appointment date before shift end; no-show only after shift start; patients cancel only their own, before shift start. Every appointment response carries `allowedActions` (state machine + guards for the viewer); the UI shows only those buttons.
+- **Guards** (`server/src/domain/appointmentRules.ts`):
+  - check-in only on the appointment date, before shift end;
+  - no-show only after shift start;
+  - patients cancel only their own appointments, before shift start;
+  - doctors act only on their own roster entries;
+  - an exam starts only on the appointment date (it may start before the shift's start time);
+  - a doctor examines one patient at a time across all their shifts that day.
+
+  Every appointment response carries `allowedActions` (state machine + guards for the viewer); the UI shows only those buttons.
+
+- **Doctor queue**: call order is the lowest `queueNumber` among CHECKED_IN. "Call next" = `QueueService.callNext` → `AppointmentService.start`.
 
 ## 5. Key Constraints
 
@@ -77,6 +88,8 @@ Never change or assume otherwise without asking the user:
 - **No business rules in the client**: time/ownership rules live only on the server; the client reads `allowedActions`.
 - **One action endpoint per state change** (`POST /api/appointments/:id/cancel`, `/check-in`, …); no generic status PATCH.
 - **Language**: UI text in Vietnamese; code, identifiers, comments, API routes, database values and server messages in English.
+- **Desktop only**: build for ≥1280px desktop browsers; no breakpoint variants (`sm:`, `md:`…) or mobile-specific UI in new code. Tables and multi-column layouts are fine.
+- **File editing**: edit files only with the Edit/Write tools, never with PowerShell text replacement (`Get-Content`/`Set-Content`/`-replace`). Always keep files as UTF-8 without BOM. PowerShell 5.1 reads files as ANSI and turns Vietnamese text into mojibake.
 - **Errors**: the server returns error codes only (`{ error: { code, message, details?[{ path, code }] } }`; `message` is English and for developers). zod messages are codes. The client maps codes to Vietnamese in `client/src/i18n/errors.ts` and enum values in `client/src/i18n/labels.ts`. Never show `message` or raw enum values.
 - **Dates**: stored as `YYYY-MM-DD` and `HH:mm` strings (local clinic time, no TZ conversion); displayed as `dd/MM/yyyy` via `client/src/lib/date.ts`. Time-dependent services take an injectable `Clock`.
 - **Database**: `DATABASE_URL` must keep `?connection_limit=1`; it serializes booking transactions (no overbooking, no duplicate queue numbers). Schema changes need a migration.
@@ -96,9 +109,9 @@ Never change or assume otherwise without asking the user:
 - Vietnamese UI + error-code translation + dd/MM/yyyy dates: **done**.
 - Phase 2 – Patient booking (availability, wizard, my appointments, cancel), state machine: **done** (commit `5c11a9a`).
 - Phase 3 – Reception (day list + filters, search, check-in, no-show, staff cancel, notes, patient details, `allowedActions`, dev simulated clock): **done**.
-- **Next: Phase 4 – Doctor queue**: duty schedule, shift queue, call next, start, complete, no-show + notes for doctors (with the "doctor owns the roster entry" guard), polling.
-- Phase 5 – Admin: specialties, rooms, doctors, receptionists, shift times, weekly roster + copy week (planned).
-- Phase 6 – Polish: error/empty states, mobile check, end-to-end API tests, README design map (planned).
+- Phase 4 – Doctor queue (duty schedule, shift queue, call next, start, complete, doctor no-show + notes, ownership and one-patient-per-doctor guards, 15 s polling; desktop-only scope): **done**.
+- **Next: Phase 5 – Admin**: specialties, rooms, doctors, receptionists, shift times, weekly roster + copy week.
+- Phase 6 – Polish: error/empty states, end-to-end API tests, README design map (planned). Mobile is out of scope.
 
 ## 7. Additional Documentation
 

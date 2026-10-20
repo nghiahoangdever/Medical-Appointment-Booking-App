@@ -66,6 +66,25 @@ See `appointment_state_machine.md` row 1. The rule lives only in `server/src/dom
 
 `GET /api/appointments?date=…` lists a day in the order date → shift start → doctor → `queueNumber`, which is the queue order per roster entry. `counts` gives per-status totals for the same filters, ignoring the status filter. No-shows keep their place in capacity (`usesCapacity`), and checking in doesn't change the queue number.
 
+## Doctor queue (Phase 4)
+
+Code: `server/src/modules/queue/queue.service.ts` (`QueueService`), `client/src/pages/doctor/`.
+
+- **Duty schedule** (`GET /api/doctor/schedule`): the doctor's roster entries from today to today + 13, earliest first, each with `counts` per status and `maxPatients`. Only the doctor's own entries are listed.
+- **Queue** (`GET /api/roster-entries/:id/queue`): every appointment of the entry in `queueNumber` order, as staff views with the doctor's `allowedActions`, plus `nextAppointmentId`. Another doctor's entry returns 404 `ROSTER_ENTRY_NOT_FOUND`.
+- **Call order**: the lowest `queueNumber` with status CHECKED_IN, regardless of check-in time. Patients who haven't arrived (BOOKED) are skipped, so their number is not lost and they can still be called once checked in.
+- **Call next** (`POST /api/roster-entries/:id/call-next`): checks ownership (404), then `AppointmentRepository.findFirstCheckedIn` (none → 409 `NO_PATIENT_WAITING`), then `AppointmentService.start` on it. The state machine and guards apply, including `DOCTOR_BUSY` while another patient of that shift is IN_EXAMINATION and `EXAM_NOT_TODAY`.
+- **Out of order**: a doctor can start any waiting patient directly (`POST /api/appointments/:id/start`). The same guards apply.
+- **One at a time per doctor**: at most one IN_EXAMINATION per doctor per day, across all their shifts. A morning exam left open blocks the afternoon queue. This is enforced in a transaction, and tests with concurrent requests (same shift and two different shifts) check it. The queue view adds `inExaminationElsewhere` (`{ appointmentId, rosterEntryId, queueNumber, patientName, shift }` or null) so the page can say where the open exam is and link to that queue.
+- No-shows and completed exams keep their place in capacity (`usesCapacity`), and queue numbers never change.
+
+UI (desktop):
+
+- **Schedule:** a table with one row per shift (status counts, "Mở hàng đợi").
+- **Queue page, left column:** the "Gọi bệnh nhân tiếp theo" button (disabled when `nextAppointmentId` is null, with a hint) and the patient in examination.
+- **Queue page, right column:** waiting (checked in), not arrived (booked) and finished patients.
+- **Refresh:** polling every 15 s plus a refresh button.
+
 ## Roster conflict rules
 
 Implemented (schema): one entry per `(doctorId, date, shiftId)` and per `(roomId, date, shiftId)`.

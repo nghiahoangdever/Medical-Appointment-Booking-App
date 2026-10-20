@@ -97,6 +97,33 @@ export interface StaffAppointment extends Appointment {
 
 export type StatusCounts = Record<AppointmentStatus, number>;
 
+/** One of the doctor's roster entries (UC-D1), with per-status appointment counts. */
+export interface DutyShift {
+  id: number;
+  date: string;
+  doctor: { id: number; fullName: string; title: string };
+  specialty: { id: number; name: string };
+  shift: Shift;
+  room: { id: number; code: string; name: string; floor: string | null };
+  maxPatients: number;
+  counts: StatusCounts;
+}
+
+/** UC-D2: a shift's queue. `nextAppointmentId` is who "call next" would start (null: nobody). */
+export interface DoctorQueue {
+  entry: DutyShift;
+  appointments: StaffAppointment[];
+  nextAppointmentId: number | null;
+  /** The doctor's patient in examination in another shift that day (blocks this queue). */
+  inExaminationElsewhere: {
+    appointmentId: number;
+    rosterEntryId: number;
+    queueNumber: number;
+    patientName: string;
+    shift: Shift;
+  } | null;
+}
+
 export interface StaffAppointmentFilters {
   date?: string;
   shiftId?: number;

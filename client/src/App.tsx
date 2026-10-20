@@ -6,6 +6,8 @@ import { Layout } from './components/Layout';
 import { PageSpinner } from './components/ui/PageSpinner';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
+import { DoctorQueuePage } from './pages/doctor/DoctorQueuePage';
+import { DoctorSchedulePage } from './pages/doctor/DoctorSchedulePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { BookAppointmentPage } from './pages/patient/booking/BookAppointmentPage';
 import { MyAppointmentsPage } from './pages/patient/MyAppointmentsPage';
@@ -38,19 +40,8 @@ export function App() {
                 <Route path="/reception" element={<ReceptionPage />} />
               </Route>
               <Route element={<ProtectedRoute roles={['DOCTOR']} />}>
-                <Route
-                  path="/doctor"
-                  element={
-                    <RoleHome
-                      title="Lịch trực của tôi"
-                      upcoming={[
-                        'Các ca trực sắp tới',
-                        'Hàng đợi bệnh nhân với nút “Gọi bệnh nhân tiếp theo”',
-                        'Hoàn thành / vắng mặt / ghi chú',
-                      ]}
-                    />
-                  }
-                />
+                <Route path="/doctor" element={<DoctorSchedulePage />} />
+                <Route path="/doctor/queue/:rosterEntryId" element={<DoctorQueuePage />} />
               </Route>
               <Route element={<ProtectedRoute roles={['ADMIN']} />}>
                 <Route

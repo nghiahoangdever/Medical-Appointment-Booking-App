@@ -33,4 +33,6 @@ export const appointmentsApi = {
     action<T>(id, 'cancel', { reason }),
   checkIn: (id: number) => action<StaffAppointment>(id, 'check-in'),
   markNoShow: (id: number) => action<StaffAppointment>(id, 'no-show'),
+  start: (id: number) => action<StaffAppointment>(id, 'start'),
+  complete: (id: number) => action<StaffAppointment>(id, 'complete'),
 };

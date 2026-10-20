@@ -23,9 +23,14 @@ export const appointmentDetailInclude = {
   },
 } satisfies Prisma.AppointmentInclude;
 
-export type AppointmentRecord = Prisma.AppointmentGetPayload<{
-  include: typeof appointmentDetailInclude;
-}>;
+type AppointmentRow = Prisma.AppointmentGetPayload<{ include: typeof appointmentDetailInclude }>;
+
+/**
+ * An appointment as every repository read returns it. `doctorInExamination` is how many
+ * appointments the same doctor has IN_EXAMINATION on the same date, across all their shifts
+ * (for the "one patient at a time per doctor" guard).
+ */
+export type AppointmentRecord = AppointmentRow & { doctorInExamination: number };
 
 export interface NewAppointment {
   code: string;
@@ -65,14 +70,44 @@ function staffWhere(filter: Omit<StaffAppointmentFilter, 'status'>): Prisma.Appo
   };
 }
 
+const doctorDayKey = (doctorId: number, date: string) => `${doctorId}|${date}`;
+
+/** Adds `doctorInExamination` to rows with one extra query for all (doctor, date) pairs. */
+async function withDoctorLoad(rows: AppointmentRow[], db: Db): Promise<AppointmentRecord[]> {
+  if (rows.length === 0) return [];
+  const pairs = new Map(
+    rows.map((r) => [
+      doctorDayKey(r.rosterEntry.doctorId, r.rosterEntry.date),
+      { doctorId: r.rosterEntry.doctorId, date: r.rosterEntry.date },
+    ]),
+  );
+  const inExamination = await db.appointment.findMany({
+    where: { status: AppointmentStatus.IN_EXAMINATION, rosterEntry: { OR: [...pairs.values()] } },
+    select: { rosterEntry: { select: { doctorId: true, date: true } } },
+  });
+  const counts = new Map<string, number>();
+  for (const { rosterEntry: e } of inExamination) {
+    const key = doctorDayKey(e.doctorId, e.date);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return rows.map((r) => ({
+    ...r,
+    doctorInExamination: counts.get(doctorDayKey(r.rosterEntry.doctorId, r.rosterEntry.date)) ?? 0,
+  }));
+}
+
 export class AppointmentRepository {
-  findById(id: number, db: Db = prisma): Promise<AppointmentRecord | null> {
-    return db.appointment.findUnique({ where: { id }, include: appointmentDetailInclude });
+  async findById(id: number, db: Db = prisma): Promise<AppointmentRecord | null> {
+    const row = await db.appointment.findUnique({
+      where: { id },
+      include: appointmentDetailInclude,
+    });
+    return row && (await withDoctorLoad([row], db))[0];
   }
 
   /** A patient's appointments, soonest first. */
-  findByPatient(patientId: number): Promise<AppointmentRecord[]> {
-    return prisma.appointment.findMany({
+  async findByPatient(patientId: number): Promise<AppointmentRecord[]> {
+    const rows = await prisma.appointment.findMany({
       where: { patientId },
       include: appointmentDetailInclude,
       orderBy: [
@@ -81,11 +116,12 @@ export class AppointmentRepository {
         { queueNumber: 'asc' },
       ],
     });
+    return withDoctorLoad(rows, prisma);
   }
 
   /** Appointments matching the staff filters, in date → shift → doctor → queue order. */
-  findForStaff(filter: StaffAppointmentFilter): Promise<AppointmentRecord[]> {
-    return prisma.appointment.findMany({
+  async findForStaff(filter: StaffAppointmentFilter): Promise<AppointmentRecord[]> {
+    const rows = await prisma.appointment.findMany({
       where: { ...staffWhere(filter), status: filter.status },
       include: appointmentDetailInclude,
       orderBy: [
@@ -96,6 +132,7 @@ export class AppointmentRepository {
       ],
       take: STAFF_LIST_LIMIT,
     });
+    return withDoctorLoad(rows, prisma);
   }
 
   /** How many appointments per status match the filters (ignoring the status filter). */
@@ -110,6 +147,41 @@ export class AppointmentRepository {
     ) as Record<AppointmentStatus, number>;
     for (const g of groups) counts[g.status as AppointmentStatus] = g._count._all;
     return counts;
+  }
+
+  /** Every appointment of one roster entry, in queue order (UC-D2). */
+  async findByRosterEntry(rosterEntryId: number): Promise<AppointmentRecord[]> {
+    const rows = await prisma.appointment.findMany({
+      where: { rosterEntryId },
+      include: appointmentDetailInclude,
+      orderBy: { queueNumber: 'asc' },
+    });
+    return withDoctorLoad(rows, prisma);
+  }
+
+  /** The waiting (CHECKED_IN) appointment with the lowest queue number (UC-D3), if any. */
+  findFirstCheckedIn(rosterEntryId: number) {
+    return prisma.appointment.findFirst({
+      where: { rosterEntryId, status: AppointmentStatus.CHECKED_IN },
+      orderBy: { queueNumber: 'asc' },
+      select: { id: true },
+    });
+  }
+
+  /** The doctor's patient currently IN_EXAMINATION on `date` (in any of their shifts), if any. */
+  findDoctorInExamination(doctorUserId: number, date: string) {
+    return prisma.appointment.findFirst({
+      where: {
+        status: AppointmentStatus.IN_EXAMINATION,
+        rosterEntry: { date, doctor: { userId: doctorUserId } },
+      },
+      select: {
+        id: true,
+        queueNumber: true,
+        patient: { select: { fullName: true } },
+        rosterEntry: { select: { id: true, shift: true } },
+      },
+    });
   }
 
   /** The patient's non-cancelled appointment on this date + shift, if any. */
@@ -128,8 +200,9 @@ export class AppointmentRepository {
     return (await db.appointment.count({ where: { code } })) > 0;
   }
 
-  create(data: NewAppointment, db: Db = prisma): Promise<AppointmentRecord> {
-    return db.appointment.create({ data, include: appointmentDetailInclude });
+  async create(data: NewAppointment, db: Db = prisma): Promise<AppointmentRecord> {
+    const row = await db.appointment.create({ data, include: appointmentDetailInclude });
+    return (await withDoctorLoad([row], db))[0];
   }
 
   /**
