@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { appointmentsApi } from '../../../api/booking';
+import { appointmentsApi } from '../../../api/appointments';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { TextAreaField } from '../../../components/ui/FormField';

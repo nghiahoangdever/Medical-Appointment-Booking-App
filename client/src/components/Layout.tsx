@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { ROLE_HOME } from '../auth/roles';
 import { ROLE_LABEL } from '../i18n/labels';
 import type { Role } from '../types';
+import { DevClockBanner } from './DevClockBanner';
 import { Logo } from './Logo';
 
 // Each phase adds its pages here.
@@ -11,7 +12,7 @@ const NAV_ITEMS: Record<Role, { to: string; label: string }[]> = {
     { to: ROLE_HOME.PATIENT, label: 'Lịch hẹn của tôi' },
     { to: '/patient/book', label: 'Đặt lịch khám' },
   ],
-  RECEPTIONIST: [{ to: ROLE_HOME.RECEPTIONIST, label: 'Hôm nay' }],
+  RECEPTIONIST: [{ to: ROLE_HOME.RECEPTIONIST, label: 'Lịch hẹn' }],
   DOCTOR: [{ to: ROLE_HOME.DOCTOR, label: 'Lịch trực' }],
   ADMIN: [{ to: ROLE_HOME.ADMIN, label: 'Tổng quan' }],
 };
@@ -23,6 +24,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen">
+      <DevClockBanner />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <Logo />

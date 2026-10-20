@@ -1,7 +1,9 @@
-import type { AppointmentStatus } from '../../domain/enums';
+import type { AppointmentAction } from '../../domain/appointmentStateMachine';
+import { allowedActions, type Actor, type AppointmentFacts } from '../../domain/appointmentRules';
+import { Role, type AppointmentStatus, type Gender } from '../../domain/enums';
 import type { AppointmentRecord } from './appointment.repository';
 
-/** The appointment as the API returns it. */
+/** The appointment as the API returns it to its patient. */
 export interface AppointmentView {
   id: number;
   code: string;
@@ -19,9 +21,40 @@ export interface AppointmentView {
   completedAt: Date | null;
   cancelledAt: Date | null;
   cancelReason: string | null;
+  /** What the viewer may do with it right now (state machine + guards); drives the UI buttons. */
+  allowedActions: AppointmentAction[];
 }
 
-export function toAppointmentView(a: AppointmentRecord): AppointmentView {
+/** Staff additionally see the patient and the internal notes. */
+export interface StaffAppointmentView extends AppointmentView {
+  patient: {
+    id: number;
+    fullName: string;
+    phone: string;
+    email: string;
+    dateOfBirth: string | null;
+    gender: Gender | null;
+    address: string | null;
+  };
+  notes: {
+    id: number;
+    content: string;
+    createdAt: Date;
+    author: { fullName: string; role: Role };
+  }[];
+}
+
+export function appointmentFacts(a: AppointmentRecord): AppointmentFacts {
+  return {
+    status: a.status as AppointmentStatus,
+    patientId: a.patientId,
+    date: a.rosterEntry.date,
+    shiftStart: a.rosterEntry.shift.startTime,
+    shiftEnd: a.rosterEntry.shift.endTime,
+  };
+}
+
+export function toAppointmentView(a: AppointmentRecord, viewer: Actor, now: Date): AppointmentView {
   const { shift, room, doctor } = a.rosterEntry;
   return {
     id: a.id,
@@ -40,5 +73,39 @@ export function toAppointmentView(a: AppointmentRecord): AppointmentView {
     completedAt: a.completedAt,
     cancelledAt: a.cancelledAt,
     cancelReason: a.cancelReason,
+    allowedActions: allowedActions(appointmentFacts(a), viewer, now),
   };
+}
+
+export function toStaffAppointmentView(
+  a: AppointmentRecord,
+  viewer: Actor,
+  now: Date,
+): StaffAppointmentView {
+  const profile = a.patient.patientProfile;
+  return {
+    ...toAppointmentView(a, viewer, now),
+    patient: {
+      id: a.patient.id,
+      fullName: a.patient.fullName,
+      phone: a.patient.phone,
+      email: a.patient.email,
+      dateOfBirth: profile?.dateOfBirth ?? null,
+      gender: (profile?.gender as Gender | undefined) ?? null,
+      address: profile?.address ?? null,
+    },
+    notes: a.notes.map((n) => ({
+      id: n.id,
+      content: n.content,
+      createdAt: n.createdAt,
+      author: { fullName: n.author.fullName, role: n.author.role as Role },
+    })),
+  };
+}
+
+/** Patients get the patient view (no notes); everyone else gets the staff view. */
+export function toViewFor(a: AppointmentRecord, viewer: Actor, now: Date) {
+  return viewer.role === Role.PATIENT
+    ? toAppointmentView(a, viewer, now)
+    : toStaffAppointmentView(a, viewer, now);
 }

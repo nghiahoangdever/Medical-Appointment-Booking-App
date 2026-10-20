@@ -1,4 +1,6 @@
+import { appClock } from '../../clock';
 import { runInTransaction, type Db } from '../../db/prisma';
+import { Role } from '../../domain/enums';
 import { INITIAL_STATUS } from '../../domain/appointmentStateMachine';
 import { bookingWindow, generateAppointmentCode, pickLeastBooked } from '../../domain/booking';
 import { badRequest, conflict, notFound } from '../../domain/errors';
@@ -79,12 +81,13 @@ export class BookingService {
           queueNumber,
           status: INITIAL_STATUS,
           reason: req.reason,
+          bookedAt: now,
         },
         tx,
       );
     });
 
-    return toAppointmentView(appointment);
+    return toAppointmentView(appointment, { id: patientId, role: Role.PATIENT }, now);
   }
 
   private async newCode(db: Db): Promise<string> {
@@ -100,4 +103,5 @@ export const bookingService = new BookingService(
   rosterRepository,
   appointmentRepository,
   shiftRepository,
+  appClock,
 );

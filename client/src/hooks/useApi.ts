@@ -3,13 +3,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 interface UseApiOptions {
   /** Re-fetch every `pollMs` milliseconds (simple polling instead of real-time updates). */
   pollMs?: number;
+  /** Keep showing the previous result while a new `load` (e.g. changed filters) is fetching. */
+  keepData?: boolean;
 }
 
 /**
  * Loads data with `load` (memoize it with useCallback) and exposes `refresh()` for a
  * Refresh button. Pass `null` to load nothing yet. Responses from outdated requests are ignored.
  */
-export function useApi<T>(load: (() => Promise<T>) | null, { pollMs }: UseApiOptions = {}) {
+export function useApi<T>(
+  load: (() => Promise<T>) | null,
+  { pollMs, keepData = false }: UseApiOptions = {},
+) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(load !== null);
@@ -31,13 +36,13 @@ export function useApi<T>(load: (() => Promise<T>) | null, { pollMs }: UseApiOpt
     }
   }, [load]);
 
-  // A new `load` means different data: drop the old result and fetch again.
+  // A new `load` means different data: drop the old result (unless keepData) and fetch again.
   useEffect(() => {
-    setData(null);
+    if (!keepData) setData(null);
     setError(null);
     if (load) void refresh();
     else setLoading(false);
-  }, [load, refresh]);
+  }, [load, refresh, keepData]);
 
   useEffect(() => {
     if (!pollMs || !load) return;

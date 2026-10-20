@@ -31,6 +31,14 @@ Every seeded account uses the password **`password123`**. In development, the lo
 
 The seed creates a duty roster for **this week and next** (Mon–Sat, Morning 07:30–11:30 / Afternoon 13:00–17:00) and two bookings for the first doctor's next morning shift (patients 1 and 2). To roll the dates forward, run `npm run db:seed -w server` again. It wipes and reseeds everything.
 
+### Testing time-based rules at any hour (dev only)
+
+Check-in is allowed only on the appointment day before the shift ends, and no-show only after the shift starts. To try these at night or on a Sunday:
+
+1. `npm run db:seed -w server`, then `npm run db:seed:today -w server`. This fills **today** with morning and afternoon queues for doctor1 (Nội tổng quát) and doctor3 (Nhi khoa): 7 booked, 3 checked in, 1 cancelled. It also adds patients 4–6.
+2. Set `DEV_FAKE_NOW="09:00"` in `server/.env` and restart `npm run dev`. The server then acts as if it were 09:00 today, and the app shows an amber banner. Try `06:00`, `09:00`, `12:00` and `18:00` to see check-in and no-show appear and disappear. The expected buttons are listed in `.claude/docs/date_logic.md`.
+3. Set `DEV_FAKE_NOW=""` and restart to go back to the real clock. The setting is refused when `NODE_ENV=production`, and tests ignore it.
+
 ## Language conventions
 
 - **UI text is Vietnamese.** Code, identifiers, API routes and database values stay English.
@@ -83,21 +91,28 @@ client/src/
   i18n/              Vietnamese labels and error-code messages
   lib/date.ts        dd/MM/yyyy formatting and parsing
   hooks/useApi.ts    load + refresh (+ optional polling)
-  components/        Layout, AppointmentCard, StatusBadge, RefreshButton, ui/…
+  components/        Layout, AppointmentCard, CancelAppointment, PatientInfo, AppointmentNotes, StatusBadge, RefreshButton, ui/…
   pages/             auth/, patient/ (+ booking/ wizard), more per phase
 ```
 
 ### API (so far)
 
-| Method & path                                     | Role                         | Use case     |
-| ------------------------------------------------- | ---------------------------- | ------------ |
-| `POST /api/auth/register`, `POST /api/auth/login` | public                       | UC-P1, login |
-| `GET /api/auth/me`                                | any                          | session      |
-| `GET /api/specialties`, `/:id/doctors`            | any                          | UC-P2        |
-| `GET /api/availability?specialtyId&doctorId?`     | any                          | UC-P3        |
-| `POST /api/appointments`                          | Patient                      | UC-P4        |
-| `GET /api/appointments/mine`                      | Patient                      | UC-P5/P6     |
-| `POST /api/appointments/:id/cancel`               | Patient, Receptionist, Admin | UC-P7/R4     |
+| Method & path                                                      | Role                         | Use case     |
+| ------------------------------------------------------------------ | ---------------------------- | ------------ |
+| `POST /api/auth/register`, `POST /api/auth/login`                  | public                       | UC-P1, login |
+| `GET /api/auth/me`                                                 | any                          | session      |
+| `GET /api/specialties`, `/:id/doctors`                             | any                          | UC-P2        |
+| `GET /api/availability?specialtyId&doctorId?`                      | any                          | UC-P3        |
+| `POST /api/appointments`                                           | Patient                      | UC-P4        |
+| `GET /api/appointments/mine`                                       | Patient                      | UC-P5/P6     |
+| `POST /api/appointments/:id/cancel`                                | Patient, Receptionist, Admin | UC-P7/R4     |
+| `GET /api/appointments?date&shiftId&specialtyId&doctorId&status&q` | Receptionist, Admin          | UC-R1/R2     |
+| `POST /api/appointments/:id/check-in`                              | Receptionist                 | UC-R3        |
+| `POST /api/appointments/:id/no-show`                               | Receptionist                 | UC-R5        |
+| `POST /api/appointments/:id/notes`                                 | Receptionist                 | UC-R7        |
+| `GET /api/shifts`                                                  | any                          | filters      |
+
+Every appointment in a response carries `allowedActions`: what the current user can do with it right now, according to the state machine and the shift times. The UI shows only those buttons.
 
 `GET /api/availability` returns the **whole 14-day booking window** in one response (each day → shifts → places left), not a single date as the original sequence diagram said. The wizard can then gray out full or closed days without one request per day. In the "patient books" sequence diagram, step 3 becomes `GET /availability?specialtyId[&doctorId]`.
 
@@ -110,6 +125,7 @@ client/src/
 | Use cases                                      | one route + controller method each (e.g. UC-P1 Register → `POST /api/auth/register`)                       |
 | Access control per actor                       | `authenticate` + `requireRole(...)` middleware                                                             |
 | State diagram (appointment status)             | `server/src/domain/appointmentStateMachine.ts`: `TRANSITIONS` table, one row per arrow                     |
+| State diagram guards                           | `server/src/domain/appointmentRules.ts`: `guardFailure`, `allowedActions`                                  |
 | Sequence: patient books an appointment         | `BookingService.book` in `server/src/modules/appointments/booking.service.ts` (steps numbered in comments) |
 | Booking rules (window, capacity, auto-assign)  | `server/src/domain/booking.ts`                                                                             |
 
@@ -119,7 +135,7 @@ client/src/
 - [x] **Phase 1:** data model, seed data, patient registration, login (email or phone), JWT, role-based routing
 - [x] **Vietnamese UI:** error codes from the server, translations in the client, dd/MM/yyyy dates
 - [x] **Phase 2:** patient booking (availability, booking wizard, my appointments, cancel), appointment state machine
-- [ ] Phase 3: reception (day list, search, check-in, cancel, no-show, notes)
+- [x] **Phase 3:** reception (day list with filters, search, check-in, cancel, no-show, notes, patient details)
 - [ ] Phase 4: doctor queue (call next, complete, no-show, notes, polling)
 - [ ] Phase 5: admin management (specialties, rooms, staff, shift times, weekly roster)
 - [ ] Phase 6: polish and end-to-end tests

@@ -1,33 +1,30 @@
 import { useState } from 'react';
-import { appointmentsApi } from '../../api/booking';
-import { Alert } from '../../components/ui/Alert';
-import { Button } from '../../components/ui/Button';
-import { TextAreaField } from '../../components/ui/FormField';
-import { errorMessage } from '../../i18n/errors';
-import { hasTimePassed } from '../../lib/date';
-import type { Appointment } from '../../types';
+import { appointmentsApi } from '../api/appointments';
+import { errorMessage } from '../i18n/errors';
+import type { Appointment } from '../types';
+import { Alert } from './ui/Alert';
+import { Button } from './ui/Button';
+import { TextAreaField } from './ui/FormField';
 
-interface CancelAppointmentProps {
-  appointment: Appointment;
-  onCancelled: (updated: Appointment) => void;
+interface CancelAppointmentProps<T extends Appointment> {
+  appointment: T;
+  onCancelled: (updated: T) => void;
 }
 
-/** UC-P7: cancel button with an inline confirmation (patients: BOOKED and before the shift starts). */
-export function CancelAppointment({ appointment, onCancelled }: CancelAppointmentProps) {
+/**
+ * UC-P7 / UC-R4: "Hủy lịch hẹn" with an inline confirmation and optional reason.
+ * Rendered only when the server lists CANCEL in `allowedActions`.
+ */
+export function CancelAppointment<T extends Appointment>({
+  appointment,
+  onCancelled,
+}: CancelAppointmentProps<T>) {
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (appointment.status !== 'BOOKED') return null;
-
-  if (hasTimePassed(appointment.date, appointment.shift.startTime)) {
-    return (
-      <p className="text-sm text-slate-500">
-        Ca khám đã bắt đầu nên không thể hủy trực tuyến. Vui lòng liên hệ quầy lễ tân.
-      </p>
-    );
-  }
+  if (!appointment.allowedActions.includes('CANCEL')) return null;
 
   if (!confirming) {
     return (
@@ -41,7 +38,7 @@ export function CancelAppointment({ appointment, onCancelled }: CancelAppointmen
     setSubmitting(true);
     setError(null);
     try {
-      const { appointment: updated } = await appointmentsApi.cancel(
+      const { appointment: updated } = await appointmentsApi.cancel<T>(
         appointment.id,
         reason.trim() || undefined,
       );
@@ -53,7 +50,7 @@ export function CancelAppointment({ appointment, onCancelled }: CancelAppointmen
   }
 
   return (
-    <div className="space-y-3 rounded-lg bg-red-50/50 p-3 ring-1 ring-red-100">
+    <div className="w-full space-y-3 rounded-lg bg-red-50/50 p-3 ring-1 ring-red-100">
       <p className="text-sm font-medium text-slate-800">Bạn chắc chắn muốn hủy lịch hẹn này?</p>
       {error && <Alert>{error}</Alert>}
       <TextAreaField
