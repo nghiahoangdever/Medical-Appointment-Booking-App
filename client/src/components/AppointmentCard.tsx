@@ -7,6 +7,9 @@ import { StatusBadge } from './StatusBadge';
 
 interface AppointmentCardProps {
   appointment: Appointment;
+  /** Summary line overrides; default: specialty / doctor · shift (the patient's perspective). */
+  title?: ReactNode;
+  subtitle?: ReactNode;
   defaultExpanded?: boolean;
   /** Extra details shown when expanded (e.g. patient info and notes for staff). */
   children?: ReactNode;
@@ -17,6 +20,8 @@ interface AppointmentCardProps {
 /** An appointment as a collapsible card: summary row, click to see details and actions. */
 export function AppointmentCard({
   appointment: a,
+  title,
+  subtitle,
   defaultExpanded = false,
   children,
   actions,
@@ -38,10 +43,14 @@ export function AppointmentCard({
           <div className="text-sm font-semibold">{formatDayMonth(a.date)}</div>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-slate-900">{a.specialty.name}</p>
+          <p className="truncate font-medium text-slate-900">{title ?? a.specialty.name}</p>
           <p className="truncate text-sm text-slate-500">
-            {doctorName(a.doctor)} · {shiftLabel(a.shift.name)} {a.shift.startTime}–
-            {a.shift.endTime}
+            {subtitle ?? (
+              <>
+                {doctorName(a.doctor)} · {shiftLabel(a.shift.name)} {a.shift.startTime}–
+                {a.shift.endTime}
+              </>
+            )}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">

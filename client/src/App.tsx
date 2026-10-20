@@ -9,6 +9,7 @@ import { RegisterPage } from './pages/auth/RegisterPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { BookAppointmentPage } from './pages/patient/booking/BookAppointmentPage';
 import { MyAppointmentsPage } from './pages/patient/MyAppointmentsPage';
+import { ReceptionPage } from './pages/reception/ReceptionPage';
 import { RoleHome } from './pages/RoleHome';
 
 /** "/" sends users to their role's home page, or to login. */
@@ -34,19 +35,7 @@ export function App() {
                 <Route path="/patient/book" element={<BookAppointmentPage />} />
               </Route>
               <Route element={<ProtectedRoute roles={['RECEPTIONIST']} />}>
-                <Route
-                  path="/reception"
-                  element={
-                    <RoleHome
-                      title="Lễ tân"
-                      upcoming={[
-                        'Danh sách lịch hẹn trong ngày, có bộ lọc',
-                        'Tìm theo mã lịch hẹn hoặc số điện thoại',
-                        'Check-in bệnh nhân',
-                      ]}
-                    />
-                  }
-                />
+                <Route path="/reception" element={<ReceptionPage />} />
               </Route>
               <Route element={<ProtectedRoute roles={['DOCTOR']} />}>
                 <Route

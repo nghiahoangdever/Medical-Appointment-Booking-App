@@ -1,3 +1,4 @@
+import { appClock } from '../../clock';
 import { BOOKING_WINDOW_DAYS, bookingWindow, remainingSlots } from '../../domain/booking';
 import { notFound } from '../../domain/errors';
 import { addDays, hasTimePassed, systemClock, type Clock } from '../../domain/time';
@@ -115,4 +116,5 @@ export const availabilityService = new AvailabilityService(
   specialtyRepository,
   doctorRepository,
   rosterRepository,
+  appClock,
 );

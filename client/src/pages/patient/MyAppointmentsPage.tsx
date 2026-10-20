@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { appointmentsApi } from '../../api/booking';
+import { appointmentsApi } from '../../api/appointments';
 import { AppointmentCard } from '../../components/AppointmentCard';
+import { CancelAppointment } from '../../components/CancelAppointment';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
 import { RefreshButton } from '../../components/RefreshButton';
@@ -12,7 +13,6 @@ import { useApi } from '../../hooks/useApi';
 import { errorMessage } from '../../i18n/errors';
 import { todayIso } from '../../lib/date';
 import type { Appointment, AppointmentStatus } from '../../types';
-import { CancelAppointment } from './CancelAppointment';
 
 const ACTIVE_STATUSES: AppointmentStatus[] = ['BOOKED', 'CHECKED_IN', 'IN_EXAMINATION'];
 
@@ -95,13 +95,31 @@ export function MyAppointmentsPage() {
               key={a.id}
               appointment={a}
               defaultExpanded={a.id === bookedId}
-              actions={<CancelAppointment appointment={a} onCancelled={handleCancelled} />}
+              actions={<PatientActions appointment={a} onCancelled={handleCancelled} />}
             />
           ))}
         </div>
       )}
     </>
   );
+}
+
+function PatientActions({
+  appointment,
+  onCancelled,
+}: {
+  appointment: Appointment;
+  onCancelled: (updated: Appointment) => void;
+}) {
+  // BOOKED but the server no longer allows CANCEL → the shift has started.
+  if (appointment.status === 'BOOKED' && !appointment.allowedActions.includes('CANCEL')) {
+    return (
+      <p className="text-sm text-slate-500">
+        Ca khám đã bắt đầu nên không thể hủy trực tuyến. Vui lòng liên hệ quầy lễ tân.
+      </p>
+    );
+  }
+  return <CancelAppointment appointment={appointment} onCancelled={onCancelled} />;
 }
 
 function TabButton({

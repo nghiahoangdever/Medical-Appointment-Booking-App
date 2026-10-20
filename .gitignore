@@ -11,6 +11,9 @@ coverage/
 server/prisma/*.db
 server/prisma/*.db-journal
 
+# Personal Claude Code settings (shared docs in .claude/docs are committed)
+.claude/settings.local.json
+
 # OS / editor
 .DS_Store
 Thumbs.db

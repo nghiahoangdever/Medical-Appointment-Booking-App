@@ -7,6 +7,7 @@ import { Role } from '../src/domain/enums';
 import { AppointmentService } from '../src/modules/appointments/appointment.service';
 import { appointmentRepository } from '../src/modules/appointments/appointment.repository';
 import { BookingService, type BookingRequest } from '../src/modules/appointments/booking.service';
+import { noteRepository } from '../src/modules/appointments/note.repository';
 import { rosterRepository } from '../src/modules/roster/roster.repository';
 import { shiftRepository } from '../src/modules/shifts/shift.repository';
 import { prisma, resetDatabase } from './helpers/db';
@@ -23,7 +24,7 @@ const booking = new BookingService(
   shiftRepository,
   clockAt(NOW),
 );
-const appointments = new AppointmentService(appointmentRepository, clockAt(NOW));
+const appointments = new AppointmentService(appointmentRepository, noteRepository, clockAt(NOW));
 
 let clinic: Awaited<ReturnType<typeof createClinic>>;
 
@@ -101,6 +102,8 @@ describe('BookingService.book', () => {
       specialty: { id: clinic.specialty.id },
     });
     expect(result.code).toMatch(/^AP-[A-Z2-9]{6}$/);
+    expect(result.bookedAt).toEqual(NOW); // stamped from the injected clock, not the DB default
+    expect(result.allowedActions).toEqual(['CANCEL']);
   });
 
   it('never reuses a queue number after a cancellation, but frees the place', async () => {

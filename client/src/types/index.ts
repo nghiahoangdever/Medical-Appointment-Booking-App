@@ -66,6 +66,45 @@ export interface Appointment {
   completedAt: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  /** What the current user may do now (decided by the server: state machine + time rules). */
+  allowedActions: AppointmentAction[];
+}
+
+export type AppointmentAction = 'CANCEL' | 'CHECK_IN' | 'START' | 'COMPLETE' | 'MARK_NO_SHOW';
+
+export interface AppointmentNote {
+  id: number;
+  content: string;
+  createdAt: string;
+  author: { fullName: string; role: Role };
+}
+
+export interface PatientDetails {
+  id: number;
+  fullName: string;
+  phone: string;
+  email: string;
+  dateOfBirth: string | null;
+  gender: Gender | null;
+  address: string | null;
+}
+
+/** What staff see: the appointment plus the patient and internal notes. */
+export interface StaffAppointment extends Appointment {
+  patient: PatientDetails;
+  notes: AppointmentNote[];
+}
+
+export type StatusCounts = Record<AppointmentStatus, number>;
+
+export interface StaffAppointmentFilters {
+  date?: string;
+  shiftId?: number;
+  specialtyId?: number;
+  doctorId?: number;
+  status?: AppointmentStatus;
+  /** Part of an appointment code or a phone number; searches all dates. */
+  q?: string;
 }
 
 export type ShiftAvailabilityStatus = 'AVAILABLE' | 'FULL' | 'STARTED';

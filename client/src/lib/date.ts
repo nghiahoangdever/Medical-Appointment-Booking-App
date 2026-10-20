@@ -62,9 +62,19 @@ export function parseDisplayDate(text: string): string | null {
   return toIsoDate(date);
 }
 
-/** True once `isoDate` at `time` ("HH:mm") has been reached, e.g. a shift has started. */
-export function hasTimePassed(isoDate: string, time: string, now: Date = new Date()): boolean {
-  const today = todayIso(now);
-  const current = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  return isoDate < today || (isoDate === today && current >= time);
+/** Calendar arithmetic on "YYYY-MM-DD". */
+export function addDays(isoDate: string, days: number): string {
+  const d = toLocalDate(isoDate);
+  d.setDate(d.getDate() + days);
+  return toIsoDate(d);
 }
+
+/** Whole years between a date of birth and `onDate` (both "YYYY-MM-DD"). */
+export function ageOn(dateOfBirth: string, onDate: string): number {
+  const [by, bm, bd] = dateOfBirth.split('-').map(Number);
+  const [y, m, d] = onDate.split('-').map(Number);
+  return y - by - (m < bm || (m === bm && d < bd) ? 1 : 0);
+}
+
+// Time-based rules (can I cancel / check in / mark no-show?) are decided by the server and
+// arrive as `allowedActions`; the client deliberately has no copy of them.

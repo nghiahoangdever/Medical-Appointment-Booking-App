@@ -38,6 +38,12 @@ const MESSAGES: Record<string, string> = {
   ACTION_NOT_ALLOWED_FOR_ROLE: 'Bạn không có quyền thực hiện thao tác này.',
   CANCEL_DEADLINE_PASSED: 'Đã quá hạn hủy: chỉ có thể hủy trước giờ bắt đầu ca khám.',
   APPOINTMENT_CHANGED: 'Lịch hẹn vừa được người khác cập nhật. Vui lòng tải lại trang.',
+  NOT_YOUR_APPOINTMENT: 'Bạn chỉ có thể thao tác với lịch hẹn của chính mình.',
+
+  // Reception
+  CHECK_IN_NOT_TODAY: 'Chỉ có thể check-in vào đúng ngày khám.',
+  CHECK_IN_SHIFT_ENDED: 'Ca khám đã kết thúc, không thể check-in.',
+  NO_SHOW_TOO_EARLY: 'Chỉ có thể đánh dấu vắng mặt sau khi ca khám bắt đầu.',
 
   // Form fields
   REQUIRED: 'Vui lòng nhập thông tin này.',
@@ -57,6 +63,11 @@ const MESSAGES: Record<string, string> = {
   IDENTIFIER_REQUIRED: 'Vui lòng nhập email hoặc số điện thoại.',
   PASSWORD_REQUIRED: 'Vui lòng nhập mật khẩu.',
   REASON_TOO_LONG: 'Nội dung quá dài (tối đa 500 ký tự).',
+  NOTE_REQUIRED: 'Vui lòng nhập nội dung ghi chú.',
+  NOTE_TOO_LONG: 'Ghi chú quá dài (tối đa 1000 ký tự).',
+  DATE_OR_QUERY_REQUIRED: 'Vui lòng chọn ngày hoặc nhập từ khóa tìm kiếm.',
+  STATUS_INVALID: 'Trạng thái không hợp lệ.',
+  QUERY_TOO_LONG: 'Từ khóa tìm kiếm quá dài (tối đa 50 ký tự).',
 };
 
 const FALLBACK = 'Đã có lỗi xảy ra. Vui lòng thử lại.';

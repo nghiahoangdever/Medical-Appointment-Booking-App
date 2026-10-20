@@ -19,12 +19,14 @@ export function Button({
   loading = false,
   disabled,
   className = '',
+  type = 'button', // never submit a surrounding form by accident; pass type="submit" explicitly
   children,
   ...props
 }: ButtonProps) {
   return (
     <button
       {...props}
+      type={type}
       disabled={disabled || loading}
       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${VARIANTS[variant]} ${className}`}
     >

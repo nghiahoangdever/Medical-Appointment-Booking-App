@@ -2,7 +2,10 @@ import type { Prisma } from '@prisma/client';
 import { prisma, type Db } from '../../db/prisma';
 import { AppointmentStatus } from '../../domain/enums';
 
-/** Everything needed to show an appointment: roster entry → shift, room, doctor, specialty. */
+/**
+ * Everything needed to show an appointment: roster entry → shift, room, doctor, specialty;
+ * the patient with their profile; and staff notes. The mapper decides what each viewer sees.
+ */
 export const appointmentDetailInclude = {
   rosterEntry: {
     include: {
@@ -10,6 +13,13 @@ export const appointmentDetailInclude = {
       room: true,
       doctor: { include: { user: { select: { fullName: true } }, specialty: true } },
     },
+  },
+  patient: {
+    select: { id: true, fullName: true, phone: true, email: true, patientProfile: true },
+  },
+  notes: {
+    include: { author: { select: { fullName: true, role: true } } },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
   },
 } satisfies Prisma.AppointmentInclude;
 
@@ -24,6 +34,35 @@ export interface NewAppointment {
   queueNumber: number;
   status: AppointmentStatus;
   reason?: string;
+  bookedAt: Date;
+}
+
+/** Filters for the staff appointment list (UC-R1 / UC-R2). */
+export interface StaffAppointmentFilter {
+  date?: string;
+  shiftId?: number;
+  specialtyId?: number;
+  doctorId?: number;
+  status?: AppointmentStatus;
+  /** Part of an appointment code or a patient's phone number. */
+  query?: string;
+}
+
+const STAFF_LIST_LIMIT = 200;
+
+function staffWhere(filter: Omit<StaffAppointmentFilter, 'status'>): Prisma.AppointmentWhereInput {
+  const query = filter.query;
+  return {
+    rosterEntry: {
+      date: filter.date,
+      shiftId: filter.shiftId,
+      doctorId: filter.doctorId,
+      doctor: filter.specialtyId ? { specialtyId: filter.specialtyId } : undefined,
+    },
+    OR: query
+      ? [{ code: { contains: query.toUpperCase() } }, { patient: { phone: { contains: query } } }]
+      : undefined,
+  };
 }
 
 export class AppointmentRepository {
@@ -42,6 +81,35 @@ export class AppointmentRepository {
         { queueNumber: 'asc' },
       ],
     });
+  }
+
+  /** Appointments matching the staff filters, in date → shift → doctor → queue order. */
+  findForStaff(filter: StaffAppointmentFilter): Promise<AppointmentRecord[]> {
+    return prisma.appointment.findMany({
+      where: { ...staffWhere(filter), status: filter.status },
+      include: appointmentDetailInclude,
+      orderBy: [
+        { rosterEntry: { date: 'asc' } },
+        { rosterEntry: { shift: { startTime: 'asc' } } },
+        { rosterEntry: { doctorId: 'asc' } },
+        { queueNumber: 'asc' },
+      ],
+      take: STAFF_LIST_LIMIT,
+    });
+  }
+
+  /** How many appointments per status match the filters (ignoring the status filter). */
+  async countByStatus(filter: StaffAppointmentFilter): Promise<Record<AppointmentStatus, number>> {
+    const groups = await prisma.appointment.groupBy({
+      by: ['status'],
+      where: staffWhere(filter),
+      _count: { _all: true },
+    });
+    const counts = Object.fromEntries(
+      Object.values(AppointmentStatus).map((s) => [s, 0]),
+    ) as Record<AppointmentStatus, number>;
+    for (const g of groups) counts[g.status as AppointmentStatus] = g._count._all;
+    return counts;
   }
 
   /** The patient's non-cancelled appointment on this date + shift, if any. */
