@@ -98,25 +98,29 @@ client/src/
 
 ### API (so far)
 
-| Method & path                                                      | Role                         | Use case     |
-| ------------------------------------------------------------------ | ---------------------------- | ------------ |
-| `POST /api/auth/register`, `POST /api/auth/login`                  | public                       | UC-P1, login |
-| `GET /api/auth/me`                                                 | any                          | session      |
-| `GET /api/specialties`, `/:id/doctors`                             | any                          | UC-P2        |
-| `GET /api/availability?specialtyId&doctorId?`                      | any                          | UC-P3        |
-| `POST /api/appointments`                                           | Patient                      | UC-P4        |
-| `GET /api/appointments/mine`                                       | Patient                      | UC-P5/P6     |
-| `POST /api/appointments/:id/cancel`                                | Patient, Receptionist, Admin | UC-P7/R4     |
-| `GET /api/appointments?date&shiftId&specialtyId&doctorId&status&q` | Receptionist, Admin          | UC-R1/R2     |
-| `POST /api/appointments/:id/check-in`                              | Receptionist                 | UC-R3        |
-| `POST /api/appointments/:id/no-show`                               | Receptionist, Doctor         | UC-R5/D6     |
-| `POST /api/appointments/:id/notes`                                 | Receptionist, Doctor         | UC-R7/D8     |
-| `GET /api/shifts`                                                  | any                          | filters      |
-| `GET /api/doctor/schedule`                                         | Doctor                       | UC-D1        |
-| `GET /api/roster-entries/:id/queue`                                | Doctor (own shift)           | UC-D2        |
-| `POST /api/roster-entries/:id/call-next`                           | Doctor (own shift)           | UC-D3        |
-| `POST /api/appointments/:id/start`                                 | Doctor (own shift)           | UC-D4        |
-| `POST /api/appointments/:id/complete`                              | Doctor (own shift)           | UC-D5        |
+| Method & path                                                                                                                   | Role                         | Use case     |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ------------ |
+| `POST /api/auth/register`, `POST /api/auth/login`                                                                               | public                       | UC-P1, login |
+| `GET /api/auth/me`                                                                                                              | any                          | session      |
+| `GET /api/specialties`, `/:id/doctors`                                                                                          | any                          | UC-P2        |
+| `GET /api/availability?specialtyId&doctorId?`                                                                                   | any                          | UC-P3        |
+| `POST /api/appointments`                                                                                                        | Patient                      | UC-P4        |
+| `GET /api/appointments/mine`                                                                                                    | Patient                      | UC-P5/P6     |
+| `POST /api/appointments/:id/cancel`                                                                                             | Patient, Receptionist, Admin | UC-P7/R4     |
+| `GET /api/appointments?date&shiftId&specialtyId&doctorId&status&q`                                                              | Receptionist, Admin          | UC-R1/R2     |
+| `POST /api/appointments/:id/check-in`                                                                                           | Receptionist                 | UC-R3        |
+| `POST /api/appointments/:id/no-show`                                                                                            | Receptionist, Doctor         | UC-R5/D6     |
+| `POST /api/appointments/:id/notes`                                                                                              | Receptionist, Doctor         | UC-R7/D8     |
+| `GET /api/shifts`                                                                                                               | any                          | filters      |
+| `/api/admin/specialties`, `/rooms`, `/doctors`, `/receptionists` (list, create, `PATCH`, `POST …/:id/activate`, `…/deactivate`) | Admin                        | UC-A1–A4     |
+| `PATCH /api/admin/shifts/:id`                                                                                                   | Admin                        | UC-A5        |
+| `GET /api/admin/roster?weekStart`, `POST/PATCH/DELETE /api/admin/roster-entries[/:id]`                                          | Admin                        | UC-A6        |
+| `POST /api/admin/roster/copy-previous-week`                                                                                     | Admin                        | UC-A7        |
+| `GET /api/doctor/schedule`                                                                                                      | Doctor                       | UC-D1        |
+| `GET /api/roster-entries/:id/queue`                                                                                             | Doctor (own shift)           | UC-D2        |
+| `POST /api/roster-entries/:id/call-next`                                                                                        | Doctor (own shift)           | UC-D3        |
+| `POST /api/appointments/:id/start`                                                                                              | Doctor (own shift)           | UC-D4        |
+| `POST /api/appointments/:id/complete`                                                                                           | Doctor (own shift)           | UC-D5        |
 
 Doctors only see and act on appointments in their own shifts. Each doctor examines one patient at a time, across all their shifts that day.
 
@@ -145,5 +149,5 @@ Every appointment in a response carries `allowedActions`: what the current user 
 - [x] **Phase 2:** patient booking (availability, booking wizard, my appointments, cancel), appointment state machine
 - [x] **Phase 3:** reception (day list with filters, search, check-in, cancel, no-show, notes, patient details)
 - [x] **Phase 4:** doctor queue (duty schedule, shift queue, call next, start, complete, no-show, notes, polling)
-- [ ] Phase 5: admin management (specialties, rooms, staff, shift times, weekly roster)
+- [x] **Phase 5:** admin management (specialties, rooms, doctor/receptionist accounts, shift times, weekly roster editor + copy previous week, all-appointments overview)
 - [ ] Phase 6: polish (error/empty states) and end-to-end tests

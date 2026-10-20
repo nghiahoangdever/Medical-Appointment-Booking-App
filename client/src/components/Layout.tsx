@@ -14,7 +14,15 @@ const NAV_ITEMS: Record<Role, { to: string; label: string }[]> = {
   ],
   RECEPTIONIST: [{ to: ROLE_HOME.RECEPTIONIST, label: 'Lịch hẹn' }],
   DOCTOR: [{ to: ROLE_HOME.DOCTOR, label: 'Lịch trực' }],
-  ADMIN: [{ to: ROLE_HOME.ADMIN, label: 'Tổng quan' }],
+  ADMIN: [
+    { to: ROLE_HOME.ADMIN, label: 'Lịch trực' },
+    { to: '/admin/appointments', label: 'Lịch hẹn' },
+    { to: '/admin/doctors', label: 'Bác sĩ' },
+    { to: '/admin/receptionists', label: 'Lễ tân' },
+    { to: '/admin/specialties', label: 'Chuyên khoa' },
+    { to: '/admin/rooms', label: 'Phòng khám' },
+    { to: '/admin/shifts', label: 'Ca khám' },
+  ],
 };
 
 /** App shell for logged-in pages. Rendered inside <ProtectedRoute>, so user is set. */

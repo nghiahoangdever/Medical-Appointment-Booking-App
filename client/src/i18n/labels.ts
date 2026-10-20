@@ -34,6 +34,18 @@ export function shiftLabel(name: string): string {
   return SHIFT_LABEL[name] ?? name;
 }
 
+/** Compact form for grid headers: "Sáng" / "Chiều". */
+export function shiftShortLabel(name: string): string {
+  return shiftLabel(name)
+    .replace(/^Ca /, '')
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
+/** Active / inactive label for admin lists. */
+export function activeLabel(isActive: boolean): string {
+  return isActive ? 'Đang hoạt động' : 'Ngừng hoạt động';
+}
+
 /** e.g. "BS.CKI Trần Thị Linh". */
 export function doctorName(doctor: { title: string; fullName: string }): string {
   return `${doctor.title} ${doctor.fullName}`;

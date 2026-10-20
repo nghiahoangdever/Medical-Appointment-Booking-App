@@ -53,6 +53,25 @@ const MESSAGES: Record<string, string> = {
   NO_PATIENT_WAITING: 'Chưa có bệnh nhân nào đang chờ (đã check-in).',
   ROSTER_ENTRY_NOT_FOUND: 'Không tìm thấy ca trực.',
 
+  // Admin
+  SPECIALTY_NAME_TAKEN: 'Đã có chuyên khoa với tên này.',
+  SPECIALTY_INACTIVE: 'Chuyên khoa này đã ngừng hoạt động.',
+  ROOM_NOT_FOUND: 'Không tìm thấy phòng khám.',
+  ROOM_CODE_TAKEN: 'Mã phòng này đã được sử dụng.',
+  ROOM_INACTIVE: 'Phòng khám này đã ngừng hoạt động.',
+  DOCTOR_INACTIVE: 'Bác sĩ này đã ngừng hoạt động.',
+  USER_NOT_FOUND: 'Không tìm thấy tài khoản.',
+  HAS_UPCOMING_APPOINTMENTS:
+    'Không thể ngừng hoạt động: vẫn còn lịch hẹn chưa hoàn tất từ hôm nay trở đi. Hãy xử lý các lịch hẹn đó trước.',
+  SHIFT_TIMES_INVALID: 'Giờ bắt đầu phải trước giờ kết thúc.',
+  SHIFT_TIMES_OVERLAP: 'Khung giờ này trùng với ca khám khác.',
+  ROSTER_DATE_IN_PAST: 'Không thể thay đổi lịch trực của ngày đã qua.',
+  ROSTER_DOCTOR_CONFLICT: 'Bác sĩ đã có lịch trực trong ca này (ở phòng khác).',
+  ROSTER_ROOM_CONFLICT: 'Phòng này đã có bác sĩ trực trong ca này.',
+  ROSTER_CAPACITY_BELOW_BOOKED: 'Số bệnh nhân tối đa không được nhỏ hơn số lượt đã đặt.',
+  ROSTER_HAS_APPOINTMENTS:
+    'Không thể xóa ca trực đã có lượt đặt (kể cả lượt đã hủy). Hãy giảm số bệnh nhân tối đa thay vì xóa.',
+
   // Form fields
   REQUIRED: 'Vui lòng nhập thông tin này.',
   INVALID_VALUE: 'Giá trị không hợp lệ.',
@@ -74,6 +93,15 @@ const MESSAGES: Record<string, string> = {
   NOTE_REQUIRED: 'Vui lòng nhập nội dung ghi chú.',
   NOTE_TOO_LONG: 'Ghi chú quá dài (tối đa 1000 ký tự).',
   DATE_OR_QUERY_REQUIRED: 'Vui lòng chọn ngày hoặc nhập từ khóa tìm kiếm.',
+  DESCRIPTION_TOO_LONG: 'Mô tả quá dài (tối đa 500 ký tự).',
+  ROOM_CODE_INVALID: 'Mã phòng chỉ gồm chữ, số và dấu gạch ngang (tối đa 10 ký tự), VD: B2-05.',
+  FLOOR_TOO_LONG: 'Tầng quá dài (tối đa 20 ký tự).',
+  TITLE_REQUIRED: 'Vui lòng nhập học hàm/học vị, VD: BS.CKI.',
+  TITLE_TOO_LONG: 'Học hàm/học vị quá dài (tối đa 50 ký tự).',
+  BIO_TOO_LONG: 'Giới thiệu quá dài (tối đa 500 ký tự).',
+  TIME_INVALID: 'Giờ không hợp lệ (định dạng HH:mm, VD: 07:30).',
+  MAX_PATIENTS_INVALID: 'Số bệnh nhân tối đa phải là số nguyên từ 1 đến 100.',
+  WEEK_START_NOT_MONDAY: 'Tuần phải bắt đầu từ thứ Hai.',
   STATUS_INVALID: 'Trạng thái không hợp lệ.',
   QUERY_TOO_LONG: 'Từ khóa tìm kiếm quá dài (tối đa 50 ký tự).',
 };

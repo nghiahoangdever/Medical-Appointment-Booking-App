@@ -31,6 +31,9 @@ const ROOMS = [
   { code: 'B2-01', name: 'Phòng khám B2-01', floor: '2' },
   { code: 'B2-02', name: 'Phòng khám B2-02', floor: '2' },
   { code: 'B2-03', name: 'Phòng khám B2-03', floor: '2' },
+  // Free rooms (no fixed doctor): one usable, one deactivated, for the admin screens.
+  { code: 'B2-04', name: 'Phòng khám B2-04', floor: '2' },
+  { code: 'C3-01', name: 'Phòng khám C3-01 (đang sửa chữa)', floor: '3', isActive: false },
 ];
 
 // Shift names are fixed identifiers; the client shows them as "Ca sáng" / "Ca chiều".

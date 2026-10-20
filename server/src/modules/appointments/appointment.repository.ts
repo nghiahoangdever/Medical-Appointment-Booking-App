@@ -184,6 +184,33 @@ export class AppointmentRepository {
     });
   }
 
+  /**
+   * Appointments from `fromDate` on that are still open (BOOKED, CHECKED_IN, IN_EXAMINATION)
+   * for a doctor, a room or a specialty — used to block deactivating them (UC-A1..A3).
+   */
+  countUpcomingOpen(
+    owner: { doctorId?: number; roomId?: number; specialtyId?: number },
+    fromDate: string,
+  ): Promise<number> {
+    return prisma.appointment.count({
+      where: {
+        status: {
+          in: [
+            AppointmentStatus.BOOKED,
+            AppointmentStatus.CHECKED_IN,
+            AppointmentStatus.IN_EXAMINATION,
+          ],
+        },
+        rosterEntry: {
+          date: { gte: fromDate },
+          doctorId: owner.doctorId,
+          roomId: owner.roomId,
+          doctor: owner.specialtyId ? { specialtyId: owner.specialtyId } : undefined,
+        },
+      },
+    });
+  }
+
   /** The patient's non-cancelled appointment on this date + shift, if any. */
   findActiveForPatientInSlot(patientId: number, date: string, shiftId: number, db: Db = prisma) {
     return db.appointment.findFirst({

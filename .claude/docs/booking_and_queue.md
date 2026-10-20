@@ -85,14 +85,34 @@ UI (desktop):
 - **Queue page, right column:** waiting (checked in), not arrived (booked) and finished patients.
 - **Refresh:** polling every 15 s plus a refresh button.
 
-## Roster conflict rules
+## Roster rules (admin week editor, Phase 5)
 
-Implemented (schema): one entry per `(doctorId, date, shiftId)` and per `(roomId, date, shiftId)`.
+Code: `server/src/domain/rosterRules.ts` (pure rules), `server/src/modules/roster/roster.service.ts` (`RosterService`), `client/src/pages/admin/roster/`. Tests: `rosterRules.test.ts`, `roster.service.test.ts`, `admin.api.test.ts`.
 
-Planned (Phase 5, admin roster editor) — not implemented:
+| Rule                                                                                                           | Where                                                                           | Error code                                                                                  |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| One entry per doctor per date + shift (any room)                                                               | `RosterService.placementFailure` + schema `@@unique([doctorId, date, shiftId])` | `ROSTER_DOCTOR_CONFLICT`                                                                    |
+| One entry per room per date + shift                                                                            | same + `@@unique([roomId, date, shiftId])`                                      | `ROSTER_ROOM_CONFLICT`                                                                      |
+| Doctor and room must be active; shift must exist                                                               | `placementFailure`                                                              | `DOCTOR_INACTIVE`, `ROOM_INACTIVE`, `DOCTOR_NOT_FOUND`, `ROOM_NOT_FOUND`, `SHIFT_NOT_FOUND` |
+| Past days are read-only (no create / update / delete); today and later are editable                            | `rosterDateFailure`                                                             | `ROSTER_DATE_IN_PAST`                                                                       |
+| `maxPatients` is 1–100 and never below the entry's `activeCount` (non-cancelled bookings)                      | zod + `capacityFailure`                                                         | `MAX_PATIENTS_INVALID`, `ROSTER_CAPACITY_BELOW_BOOKED`                                      |
+| Delete only if the entry has **no appointments at all**, cancelled ones included; reduce `maxPatients` instead | `deleteFailure`                                                                 | `ROSTER_HAS_APPOINTMENTS`                                                                   |
+| An entry's doctor, date and shift are fixed; only room and `maxPatients` can change                            | `PATCH` accepts `{ roomId?, maxPatients? }`                                     | —                                                                                           |
+| Copy previous week                                                                                             | `RosterService.copyPreviousWeek`                                                | skip reasons use the codes above                                                            |
 
-- reject a `maxPatients` lower than the entry's current `activeCount`;
-- reject deleting an entry that has non-cancelled appointments;
-- "copy previous week", skipping entries that would conflict.
+Writes run in `runInTransaction`, so checks and the insert/update can't be raced. The unique constraints are the backstop.
 
-Roster entries are currently created only by `prisma/seed.ts` and test fixtures.
+**Copy previous week** (`POST /api/admin/roster/copy-previous-week { weekStart }`, a Monday) copies every entry of the week before into the same weekday, shift, room, doctor and `maxPatients`. Entries that fail any placement rule (past target day, inactive doctor or room, doctor or room already taken) are **skipped, not errors**. The response is `{ sourceWeekStart, created, skipped: [{ sourceEntryId, date, shiftId, roomId, doctorName, reason }] }`. Copying twice creates nothing new (the second run reports doctor conflicts).
+
+**Week view** (`GET /api/admin/roster?weekStart=`, a Monday, else `WEEK_START_NOT_MONDAY`) returns:
+
+- `days[{ date, editable }]`, `shifts`;
+- `rooms`: active rooms, plus inactive ones that have entries that week;
+- `doctors`: active doctors, for the picker;
+- `entries`, each with `activeCount`, `appointmentCount`, `editable`, `deletable` and `minMaxPatients` (from `rosterPermissions`). The UI only offers what these flags allow.
+
+**Bookability.** `RosterRepository.findSlots`, used by availability and booking, only returns entries whose **doctor, room and specialty are all active**. Deactivating any of them stops new bookings in their entries. Existing appointments are kept.
+
+Roster entries are created by the admin editor, `prisma/seed.ts`, `prisma/seed-today.ts` and test fixtures.
+
+**Known limitation (confirmed):** a booked shift can't be reassigned to another doctor: the doctor/date/shift are fixed and booked entries can't be deleted. Staff can cancel the affected appointments and lower `maxPatients`. See `data_model.md` → Known limitations.

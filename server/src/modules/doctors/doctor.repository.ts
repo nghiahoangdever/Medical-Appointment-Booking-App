@@ -1,4 +1,5 @@
-import { prisma } from '../../db/prisma';
+import { prisma, type Db } from '../../db/prisma';
+import { Role } from '../../domain/enums';
 
 export interface DoctorSummary {
   id: number;
@@ -9,6 +10,22 @@ export interface DoctorSummary {
 }
 
 const doctorWithName = { user: { select: { fullName: true } } } as const;
+
+/** Doctor + account + specialty, as the admin screens need them. */
+const doctorAccountInclude = {
+  user: { select: { id: true, fullName: true, email: true, phone: true, isActive: true } },
+  specialty: { select: { id: true, name: true, isActive: true } },
+} as const;
+
+export interface NewDoctorAccount {
+  fullName: string;
+  email: string;
+  phone: string;
+  passwordHash: string;
+  specialtyId: number;
+  title: string;
+  bio: string | null;
+}
 
 export class DoctorRepository {
   /** Doctors whose accounts are active, in one specialty. */
@@ -27,6 +44,38 @@ export class DoctorRepository {
       include: doctorWithName,
     });
     return doctor && toSummary(doctor);
+  }
+
+  // Admin (UC-A3)
+
+  /** Every doctor with account and specialty, active or not. */
+  findAllAccounts() {
+    return prisma.doctor.findMany({
+      include: doctorAccountInclude,
+      orderBy: [{ specialty: { name: 'asc' } }, { id: 'asc' }],
+    });
+  }
+
+  findAccountById(id: number, db: Db = prisma) {
+    return db.doctor.findUnique({ where: { id }, include: doctorAccountInclude });
+  }
+
+  /** Creates the User (role DOCTOR) and the Doctor profile together. */
+  createAccount({ specialtyId, title, bio, ...user }: NewDoctorAccount) {
+    return prisma.doctor.create({
+      data: {
+        title,
+        bio,
+        specialty: { connect: { id: specialtyId } },
+        user: { create: { ...user, role: Role.DOCTOR } },
+      },
+      include: doctorAccountInclude,
+    });
+  }
+
+  /** Updates the doctor profile; account fields go through UserRepository. */
+  updateProfile(id: number, data: { title?: string; bio?: string | null }) {
+    return prisma.doctor.update({ where: { id }, data, include: doctorAccountInclude });
   }
 }
 

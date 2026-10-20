@@ -2,18 +2,9 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { AppointmentStatus } from '../../domain/enums';
 import { getAuthUser } from '../../middleware/authenticate';
-import { dateString, id } from '../../validation';
+import { dateString, id, optionalText } from '../../validation';
 import type { AppointmentService } from './appointment.service';
 import type { BookingService } from './booking.service';
-
-/** Optional free text; blank becomes undefined. */
-const optionalText = (max: number, tooLongCode: string) =>
-  z
-    .string()
-    .trim()
-    .max(max, tooLongCode)
-    .optional()
-    .transform((s) => s || undefined);
 
 const bookSchema = z.object({
   specialtyId: id(),

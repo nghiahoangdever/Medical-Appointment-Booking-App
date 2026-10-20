@@ -19,6 +19,18 @@ export function todayIso(now: Date = new Date()): string {
   return toIsoDate(now);
 }
 
+/** The Monday of the week containing `isoDate`. */
+export function startOfWeekIso(isoDate: string): string {
+  const d = toLocalDate(isoDate);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return toIsoDate(d);
+}
+
+/** "2026-10-19", "2026-10-25" → "19/10 – 25/10/2026" */
+export function formatDateRange(from: string, to: string): string {
+  return `${formatDayMonth(from)} – ${formatDate(to)}`;
+}
+
 /** "2026-10-20" → "20/10/2026" */
 export function formatDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-');

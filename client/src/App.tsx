@@ -4,6 +4,13 @@ import { ProtectedRoute } from './auth/ProtectedRoute';
 import { ROLE_HOME } from './auth/roles';
 import { Layout } from './components/Layout';
 import { PageSpinner } from './components/ui/PageSpinner';
+import { AdminAppointmentsPage } from './pages/admin/AdminAppointmentsPage';
+import { DoctorsPage } from './pages/admin/DoctorsPage';
+import { ReceptionistsPage } from './pages/admin/ReceptionistsPage';
+import { RoomsPage } from './pages/admin/RoomsPage';
+import { RosterPage } from './pages/admin/roster/RosterPage';
+import { ShiftsPage } from './pages/admin/ShiftsPage';
+import { SpecialtiesPage } from './pages/admin/SpecialtiesPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { DoctorQueuePage } from './pages/doctor/DoctorQueuePage';
@@ -12,7 +19,6 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { BookAppointmentPage } from './pages/patient/booking/BookAppointmentPage';
 import { MyAppointmentsPage } from './pages/patient/MyAppointmentsPage';
 import { ReceptionPage } from './pages/reception/ReceptionPage';
-import { RoleHome } from './pages/RoleHome';
 
 /** "/" sends users to their role's home page, or to login. */
 function HomeRedirect() {
@@ -44,19 +50,14 @@ export function App() {
                 <Route path="/doctor/queue/:rosterEntryId" element={<DoctorQueuePage />} />
               </Route>
               <Route element={<ProtectedRoute roles={['ADMIN']} />}>
-                <Route
-                  path="/admin"
-                  element={
-                    <RoleHome
-                      title="Quản trị"
-                      upcoming={[
-                        'Chuyên khoa, phòng khám, bác sĩ, lễ tân',
-                        'Giờ của các ca khám',
-                        'Lịch trực theo tuần',
-                      ]}
-                    />
-                  }
-                />
+                <Route path="/admin" element={<Navigate to={ROLE_HOME.ADMIN} replace />} />
+                <Route path="/admin/roster" element={<RosterPage />} />
+                <Route path="/admin/appointments" element={<AdminAppointmentsPage />} />
+                <Route path="/admin/specialties" element={<SpecialtiesPage />} />
+                <Route path="/admin/rooms" element={<RoomsPage />} />
+                <Route path="/admin/doctors" element={<DoctorsPage />} />
+                <Route path="/admin/receptionists" element={<ReceptionistsPage />} />
+                <Route path="/admin/shifts" element={<ShiftsPage />} />
               </Route>
             </Route>
           </Route>

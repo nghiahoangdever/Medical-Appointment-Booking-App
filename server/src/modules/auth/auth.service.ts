@@ -1,11 +1,9 @@
-import bcrypt from 'bcryptjs';
 import type { User } from '@prisma/client';
 import type { Gender, Role } from '../../domain/enums';
 import { conflict, forbidden, unauthorized } from '../../domain/errors';
+import { hashPassword, verifyPassword } from '../users/password';
 import { userRepository, type UserRepository } from '../users/user.repository';
 import { signToken } from './token';
-
-const BCRYPT_ROUNDS = 10;
 
 export interface RegisterPatientInput {
   fullName: string;
@@ -48,7 +46,7 @@ export class AuthService {
       fullName: input.fullName,
       email: input.email,
       phone: input.phone,
-      passwordHash: await bcrypt.hash(input.password, BCRYPT_ROUNDS),
+      passwordHash: await hashPassword(input.password),
       profile: { dateOfBirth: input.dateOfBirth, gender: input.gender, address: input.address },
     });
     return this.toAuthResult(user);
@@ -56,7 +54,7 @@ export class AuthService {
 
   async login(identifier: string, password: string): Promise<AuthResult> {
     const user = await this.users.findByEmailOrPhone(identifier);
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user || !(await verifyPassword(password, user.passwordHash))) {
       throw unauthorized('INVALID_CREDENTIALS', 'Incorrect email/phone or password.');
     }
     if (!user.isActive) {
@@ -65,10 +63,18 @@ export class AuthService {
     return this.toAuthResult(user);
   }
 
+  /**
+   * The account behind a valid token, checked on every authenticated request (see the
+   * authenticate middleware): a deleted account → 401 INVALID_TOKEN, a deactivated one →
+   * 403 ACCOUNT_DISABLED. The role comes from the database, not the token.
+   */
   async getCurrentUser(userId: number): Promise<PublicUser> {
     const user = await this.users.findById(userId);
-    if (!user || !user.isActive) {
+    if (!user) {
       throw unauthorized('INVALID_TOKEN', 'Your session is no longer valid. Please log in again.');
+    }
+    if (!user.isActive) {
+      throw forbidden('ACCOUNT_DISABLED', 'This account has been deactivated.');
     }
     return toPublicUser(user);
   }
