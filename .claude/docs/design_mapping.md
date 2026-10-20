@@ -2,7 +2,7 @@
 
 The code must mirror the UML diagrams. When code and design diverge, record it in **Design change log** below and tell the user which diagram to update.
 
-PlantUML sources matching the current code live in `docs/uml/` (`01-use-cases`, `02-class-domain`, `03-class-architecture`, `04-state-appointment`, `05-sequence-patient-books`, `06-sequence-doctor-calls-next`, `07-sequence-admin-copies-week`). When a change below says "diagram to update", update the matching `.puml` file in the same change and re-export its image to `docs/uml/svg/` (command in the README, "UML diagrams → Re-rendering").
+PlantUML sources matching the current code live in `docs/uml/` (`01-use-cases`, `02-class-domain`, `03a-class-architecture-appointments`, `03b-class-architecture-admin`, `04-state-appointment`, `05-sequence-patient-books`, `06-sequence-doctor-calls-next`, `07-sequence-admin-copies-week`). When a change below says "diagram to update", update the matching `.puml` file in the same change and re-export its image to `docs/uml/svg/` (command in the README, "UML diagrams → Re-rendering").
 
 ## Use cases → endpoint → service method
 

@@ -1,6 +1,9 @@
 @startuml
 ' MediSchedule: use case diagram. Matches .claude/docs/design_mapping.md
 ' ("Use cases -> endpoint -> service method"). UC-P8 (profile) is planned and not shown.
+' Layout (keeps links from crossing): actors in one column in the same order as their packages;
+' use cases declared so that linked ones sit next to each other; [norank] keeps each package
+' in a single column; the shared "validate" use case sits on the right.
 
 title MediSchedule: Use cases
 left to right direction
@@ -12,18 +15,17 @@ skinparam usecase {
 actor "User" as User
 actor "Patient" as Patient
 actor "Receptionist" as Receptionist
-actor "Doctor" as Doctor
 actor "Admin" as Admin
+actor "Doctor" as Doctor
 
-Patient -up-|> User
-Receptionist -up-|> User
-Doctor -up-|> User
-Admin -up-|> User
+User <|-- Patient
+User <|-- Receptionist
+User <|-- Admin
+User <|-- Doctor
 
 rectangle "MediSchedule" {
   usecase "Log in" as UC_Login
   usecase "Log out" as UC_Logout
-  usecase "Validate status transition\n(state machine + guards)" as UC_Validate <<shared>>
 
   package "Patient" as PkgPatient {
     usecase "UC-P1 Register account" as P1
@@ -37,23 +39,12 @@ rectangle "MediSchedule" {
 
   package "Reception" {
     usecase "UC-R1 View day list\n(filters)" as R1
-    usecase "UC-R2 Search by code / phone" as R2
-    usecase "UC-R3 Check in patient" as R3
-    usecase "UC-R4 Cancel for patient" as R4
-    usecase "UC-R5 Mark no-show" as R5
     usecase "UC-R6 View patient details" as R6
+    usecase "UC-R2 Search by code / phone" as R2
     usecase "UC-R7 Add note" as R7
-  }
-
-  package "Doctor" as PkgDoctor {
-    usecase "UC-D1 View duty schedule" as D1
-    usecase "UC-D2 View shift queue" as D2
-    usecase "UC-D3 Call next patient" as D3
-    usecase "UC-D4 Start a specific patient" as D4
-    usecase "UC-D5 Complete examination" as D5
-    usecase "UC-D6 Mark no-show" as D6
-    usecase "UC-D7 View patient details" as D7
-    usecase "UC-D8 Add note" as D8
+    usecase "UC-R3 Check in patient" as R3
+    usecase "UC-R5 Mark no-show" as R5
+    usecase "UC-R4 Cancel for patient" as R4
   }
 
   package "Administration" {
@@ -66,6 +57,19 @@ rectangle "MediSchedule" {
     usecase "UC-A7 Copy previous week" as A7
     usecase "UC-A8 View all appointments" as A8
   }
+
+  package "Doctor" as PkgDoctor {
+    usecase "UC-D3 Call next patient" as D3
+    usecase "UC-D4 Start a specific patient" as D4
+    usecase "UC-D5 Complete examination" as D5
+    usecase "UC-D6 Mark no-show" as D6
+    usecase "UC-D2 View shift queue" as D2
+    usecase "UC-D7 View patient details" as D7
+    usecase "UC-D8 Add note" as D8
+    usecase "UC-D1 View duty schedule" as D1
+  }
+
+  usecase "Validate status transition\n(state machine + guards)" as UC_Validate <<shared>>
 }
 
 User --> UC_Login
@@ -80,22 +84,14 @@ Patient --> P6
 Patient --> P7
 
 Receptionist --> R1
-Receptionist --> R2
-Receptionist --> R3
-Receptionist --> R4
-Receptionist --> R5
 Receptionist --> R6
+Receptionist --> R2
 Receptionist --> R7
+Receptionist --> R3
+Receptionist --> R5
+Receptionist --> R4
 
-Doctor --> D1
-Doctor --> D2
-Doctor --> D3
-Doctor --> D4
-Doctor --> D5
-Doctor --> D6
-Doctor --> D7
-Doctor --> D8
-
+Admin --> R4 : cancel from\nthe overview
 Admin --> A1
 Admin --> A2
 Admin --> A3
@@ -104,19 +100,27 @@ Admin --> A5
 Admin --> A6
 Admin --> A7
 Admin --> A8
-Admin --> R4 : cancel from\nthe overview
 
-P4 ..> P3 : <<include>>
-P5 <.. P6 : <<extend>>
-D3 ..> D4 : <<include>>
-D2 ..> D7 : <<include>>
-R1 ..> R6 : <<include>>
-A7 ..> A6 : <<extend>>
+Doctor --> D3
+Doctor --> D4
+Doctor --> D5
+Doctor --> D6
+Doctor --> D2
+Doctor --> D7
+Doctor --> D8
+Doctor --> D1
+
+P4 .[norank].> P3 : <<include>>
+P6 .[norank].> P5 : <<extend>>
+R1 .[norank].> R6 : <<include>>
+A7 .[norank].> A6 : <<extend>>
+D3 .[norank].> D4 : <<include>>
+D2 .[norank].> D7 : <<include>>
 
 P7 ..> UC_Validate : <<include>>
 R3 ..> UC_Validate : <<include>>
-R4 ..> UC_Validate : <<include>>
 R5 ..> UC_Validate : <<include>>
+R4 ..> UC_Validate : <<include>>
 D4 ..> UC_Validate : <<include>>
 D5 ..> UC_Validate : <<include>>
 D6 ..> UC_Validate : <<include>>

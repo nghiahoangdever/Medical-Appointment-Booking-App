@@ -1,0 +1,100 @@
+@startuml
+' MediSchedule: boundary / control / entity view of the server, part 2: administration
+' (roster, specialties, rooms, shifts, staff accounts). Part 1 is 03a.
+' Layering: Controller -> Service -> Repository -> Prisma; domain/ is framework-free.
+' Routes under /api/admin run authenticate + requireRole(ADMIN) (see 03a); SpecialtyController and
+' ShiftController also serve the read-only lists to any signed-in user.
+' .left. is a layout hint only (same meaning as ..>).
+
+title MediSchedule: Server classes (2/2): administration
+skinparam classAttributeIconSize 0
+skinparam nodesep 30
+skinparam ranksep 60
+hide empty attributes
+hide empty fields
+set separator none
+
+package "boundary (controllers)" <<Rectangle>> {
+  class RosterController {
+    + week()
+    + create()
+    + update()
+    + remove()
+    + copyPreviousWeek()
+  }
+  class ShiftController
+  class RoomController
+  class SpecialtyController
+  class StaffController
+}
+
+package "control (services)" <<Rectangle>> {
+  class RosterService {
+    + getWeek(weekStart)
+    + createEntry(input)
+    + updateEntry(id, changes)
+    + deleteEntry(id)
+    + copyPreviousWeek(weekStart)
+    - placementFailure(input, db)
+  }
+  class ShiftService
+  class RoomService
+  class SpecialtyService
+  class StaffService
+}
+
+package "entity access (repositories)" <<Rectangle>> {
+  class RosterRepository {
+    + findForWeek(from, to, db?)
+    + findBySlot(slot, db?)
+    + create(data, db?)
+  }
+  class ShiftRepository
+  class RoomRepository
+  class AppointmentRepository
+  class DoctorRepository
+  class SpecialtyRepository
+  class UserRepository
+}
+
+package "domain (no framework imports)" <<Rectangle>> {
+  class RosterRules <<module>> {
+    + rosterDateFailure(date, now)
+    + capacityFailure(facts, maxPatients)
+    + deleteFailure(facts, now)
+    + rosterPermissions(facts, now)
+  }
+}
+
+RosterController --> RosterService
+ShiftController --> ShiftService
+RoomController --> RoomService
+SpecialtyController --> SpecialtyService
+StaffController --> StaffService
+
+RosterService .left.> RosterRules
+RosterService --> RosterRepository
+RosterService --> ShiftRepository
+RosterService --> RoomRepository
+RosterService --> DoctorRepository
+
+ShiftService --> ShiftRepository
+
+RoomService --> RoomRepository
+RoomService --> AppointmentRepository
+
+SpecialtyService --> AppointmentRepository
+SpecialtyService --> DoctorRepository
+SpecialtyService --> SpecialtyRepository
+
+StaffService --> AppointmentRepository
+StaffService --> DoctorRepository
+StaffService --> SpecialtyRepository
+StaffService --> UserRepository
+
+legend bottom right
+  Deactivating a specialty, room or account
+  checks for open appointments from today on.
+endlegend
+
+@enduml

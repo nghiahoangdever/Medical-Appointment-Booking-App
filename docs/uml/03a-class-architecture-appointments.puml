@@ -1,10 +1,14 @@
 @startuml
-' MediSchedule: boundary / control / entity view of the server (main use cases only).
+' MediSchedule: boundary / control / entity view of the server, part 1:
+' login, booking, appointments and the doctor queue (part 2, administration: 03b).
 ' Layering: Controller -> Service -> Repository -> Prisma; domain/ is framework-free.
 ' Constructor dependencies match the singletons exported by each module.
+' -right- / .left. links are layout hints only (same meaning as -->); they keep lines from crossing.
 
-title MediSchedule: Server classes (layers)
+title MediSchedule: Server classes (1/2): booking, appointments, queue
 skinparam classAttributeIconSize 0
+skinparam nodesep 30
+skinparam ranksep 60
 hide empty attributes
 hide empty fields
 set separator none
@@ -24,6 +28,7 @@ package "boundary (controllers)" <<Rectangle>> {
     + login()
     + me()
   }
+  class AvailabilityController
   class AppointmentController {
     + book()
     + listMine()
@@ -40,18 +45,6 @@ package "boundary (controllers)" <<Rectangle>> {
     + queueForEntry()
     + callNext()
   }
-  class RosterController {
-    + week()
-    + create()
-    + update()
-    + remove()
-    + copyPreviousWeek()
-  }
-  class AvailabilityController
-  class SpecialtyController
-  class ShiftController
-  class RoomController
-  class StaffController
 }
 
 package "control (services)" <<Rectangle>> {
@@ -59,6 +52,9 @@ package "control (services)" <<Rectangle>> {
     + registerPatient(input)
     + login(identifier, password)
     + getCurrentUser(userId)
+  }
+  class AvailabilityService {
+    + getAvailability(specialtyId, doctorId?)
   }
   class BookingService {
     + book(patientId, req): AppointmentView
@@ -81,27 +77,26 @@ package "control (services)" <<Rectangle>> {
     + callNext(doctor, rosterEntryId)
     - ownEntry(doctor, rosterEntryId)
   }
-  class AvailabilityService {
-    + getAvailability(specialtyId, doctorId?)
+  class AppointmentMapper <<module>> {
+    + toAppointmentView(record, viewer, now)
+    + toStaffAppointmentView(record, viewer, now)
+    + toViewFor(record, viewer, now)
   }
-  class RosterService {
-    + getWeek(weekStart)
-    + createEntry(input)
-    + updateEntry(id, changes)
-    + deleteEntry(id)
-    + copyPreviousWeek(weekStart)
-    - placementFailure(input, db)
-  }
-  class SpecialtyService
-  class ShiftService
-  class RoomService
-  class StaffService
 }
 
 package "entity access (repositories)" <<Rectangle>> {
   class UserRepository {
     + findById(id)
     + findByEmailOrPhone(identifier)
+  }
+  class SpecialtyRepository
+  class DoctorRepository
+  class ShiftRepository
+  class RosterRepository {
+    + findSlots(filter, db?)
+    + takeNextQueueNumber(rosterEntryId, db?)
+    + findDutyShifts(doctorUserId, from, to)
+    + findDutyEntry(id)
   }
   class AppointmentRepository {
     + findById(id, db?)
@@ -114,23 +109,15 @@ package "entity access (repositories)" <<Rectangle>> {
     + create(data, db?)
     + updateStatus(id, from, data, db?)
   }
-  class RosterRepository {
-    + findSlots(filter, db?)
-    + takeNextQueueNumber(rosterEntryId, db?)
-    + findDutyShifts(doctorUserId, from, to)
-    + findDutyEntry(id)
-    + findForWeek(from, to, db?)
-    + findBySlot(slot, db?)
-    + create(data, db?)
-  }
   class NoteRepository
-  class ShiftRepository
-  class DoctorRepository
-  class RoomRepository
-  class SpecialtyRepository
 }
 
 package "domain (no framework imports)" <<Rectangle>> {
+  class BookingRules <<module>> {
+    + bookingWindow(now)
+    + pickLeastBooked(candidates)
+    + generateAppointmentCode()
+  }
   class AppointmentStateMachine <<module>> {
     + TRANSITIONS: Transition[]
     + transition(from, action, role): AppointmentStatus
@@ -140,86 +127,49 @@ package "domain (no framework imports)" <<Rectangle>> {
     + guardFailure(facts, action, actor, now): AppError?
     + allowedActions(facts, actor, now): AppointmentAction[]
   }
-  class BookingRules <<module>> {
-    + bookingWindow(now)
-    + pickLeastBooked(candidates)
-    + generateAppointmentCode()
-  }
-  class RosterRules <<module>> {
-    + rosterDateFailure(date, now)
-    + capacityFailure(facts, maxPatients)
-    + deleteFailure(facts, now)
-    + rosterPermissions(facts, now)
-  }
   class AppError {
     + status: Int
     + code: String
   }
 }
 
-class AppointmentMapper <<module>> {
-  + toAppointmentView(record, viewer, now)
-  + toStaffAppointmentView(record, viewer, now)
-  + toViewFor(record, viewer, now)
-}
-
 authenticate --> AuthService : getCurrentUser
-AuthService --> UserRepository
 
 AuthController --> AuthService
+AvailabilityController --> AvailabilityService
 AppointmentController --> BookingService
 AppointmentController --> AppointmentService
 QueueController --> QueueService
-RosterController --> RosterService
-AvailabilityController --> AvailabilityService
-SpecialtyController --> SpecialtyService
-ShiftController --> ShiftService
-RoomController --> RoomService
-StaffController --> StaffService
 
-BookingService --> RosterRepository
-BookingService --> AppointmentRepository
-BookingService --> ShiftRepository
-BookingService ..> BookingRules
-BookingService ..> AppointmentStateMachine : INITIAL_STATUS
-
-AppointmentService --> AppointmentRepository
-AppointmentService --> NoteRepository
-AppointmentService ..> AppointmentStateMachine : transition()
-AppointmentService ..> AppointmentRules : guardFailure()
-AppointmentService ..> AppointmentMapper
-
-QueueService --> RosterRepository
-QueueService --> AppointmentRepository
-QueueService --> AppointmentService : start()
+AuthService --> UserRepository
 
 AvailabilityService --> SpecialtyRepository
 AvailabilityService --> DoctorRepository
 AvailabilityService --> RosterRepository
 
-RosterService --> RosterRepository
-RosterService --> DoctorRepository
-RosterService --> RoomRepository
-RosterService --> ShiftRepository
-RosterService ..> RosterRules
+BookingService --> ShiftRepository
+BookingService --> RosterRepository
+BookingService --> AppointmentRepository
+BookingService ..> BookingRules
+BookingService ..> AppointmentStateMachine : INITIAL_STATUS
 
-SpecialtyService --> SpecialtyRepository
-SpecialtyService --> DoctorRepository
-SpecialtyService --> AppointmentRepository
-ShiftService --> ShiftRepository
-RoomService --> RoomRepository
-RoomService --> AppointmentRepository
-StaffService --> UserRepository
-StaffService --> DoctorRepository
-StaffService --> SpecialtyRepository
-StaffService --> AppointmentRepository
+QueueService -right-> AppointmentService : start()
+QueueService --> RosterRepository
+QueueService --> AppointmentRepository
+
+AppointmentService --> AppointmentRepository
+AppointmentService --> NoteRepository
+AppointmentService -right-> AppointmentMapper
+AppointmentService ..> AppointmentStateMachine : transition()
+AppointmentService ..> AppointmentRules : guardFailure()
 
 AppointmentMapper ..> AppointmentRules : allowedActions()
-AppointmentRules ..> AppointmentStateMachine : availableActions()
+AppointmentRules .left.> AppointmentStateMachine : availableActions()
 
-note bottom of AppointmentService
-  Time-dependent services receive a Clock
+legend bottom right
+  Services throw AppError(status, code);
+  time-dependent services receive a Clock
   (system clock, or a fixed clock in tests).
-end note
+endlegend
 
 @enduml
