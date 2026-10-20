@@ -1,4 +1,4 @@
-@startuml state-appointment
+@startuml
 ' MediSchedule: Appointment state diagram.
 ' Arrows = rows of TRANSITIONS (server/src/domain/appointmentStateMachine.ts).
 ' [guards] = cases of guardFailure (server/src/domain/appointmentRules.ts).

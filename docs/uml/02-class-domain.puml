@@ -1,4 +1,4 @@
-@startuml class-domain
+@startuml
 ' MediSchedule: domain (entity) class diagram. Mirrors server/prisma/schema.prisma and
 ' server/src/domain/enums.ts. Dates are "YYYY-MM-DD" strings, times "HH:mm" strings.
 

@@ -1,4 +1,4 @@
-@startuml sequence-admin-copies-week
+@startuml
 ' MediSchedule: UC-A7 "Admin copies the previous week's roster" (extends UC-A6).
 ' Names match the code and .claude/docs/design_mapping.md.
 

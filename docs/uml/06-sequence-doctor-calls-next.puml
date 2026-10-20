@@ -1,4 +1,4 @@
-@startuml sequence-doctor-calls-next
+@startuml
 ' MediSchedule: UC-D3 "Doctor calls the next patient" (includes UC-D4 start).
 ' Names match the code and .claude/docs/design_mapping.md.
 

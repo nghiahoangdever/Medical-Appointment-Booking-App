@@ -1,6 +1,6 @@
 # MediSchedule
 
-Appointment booking for a multi-specialty clinic, built for a Software Analysis & Design course. The code is laid out so each part matches a UML diagram (use case, class, state, sequence).
+Appointment booking for a multi-specialty clinic, built for a Software Analysis & Design course. The code is laid out so each part matches a UML diagram (use case, class, state, sequence); see [UML diagrams](#uml-diagrams).
 
 **Roles:** Patient · Receptionist · Doctor · Admin
 **Stack:** React + Vite + Tailwind (client) · Express + Prisma + SQLite (server) · JWT auth · TypeScript throughout
@@ -96,7 +96,7 @@ client/src/
   components/        Layout, ErrorBoundary, LoadError, AppointmentCard, StaffActions, CancelAppointment,
                      PatientInfo, AppointmentNotes, StatusBadge, RefreshButton, EmptyState, ui/…
   pages/             auth/, patient/ (+ booking/ wizard), reception/, doctor/, admin/ (+ roster/)
-docs/uml/            PlantUML sources for the diagrams (see "UML diagrams" below)
+docs/uml/            PlantUML sources for the diagrams; svg/ holds the rendered images (see "UML diagrams" below)
 ```
 
 ### API
@@ -142,7 +142,7 @@ Each diagram in `docs/uml/` maps to code as follows. The step-by-step tables (ev
 |                                                  | «include» "validate status transition"                   | `transition()` + `guardFailure()` (`server/src/domain/`)                                                                                                     |
 | Domain classes (`02-class-domain.puml`)          | entities, attributes, multiplicities, unique constraints | `server/prisma/schema.prisma`                                                                                                                                |
 |                                                  | enumerations                                             | `server/src/domain/enums.ts`, `AppointmentAction` in `appointmentStateMachine.ts`                                                                            |
-| Layered classes (`03-class-architecture.puml`)   | boundary / control / entity-access classes               | `*Controller`, `*Service`, `*Repository` in `server/src/modules/**` (one singleton each, constructor injection)                                              |
+| Layered classes (`03a-…`, `03b-…`)               | boundary / control / entity-access classes               | `*Controller`, `*Service`, `*Repository` in `server/src/modules/**` (one singleton each, constructor injection)                                              |
 |                                                  | domain modules                                           | `appointmentStateMachine.ts`, `appointmentRules.ts`, `booking.ts`, `rosterRules.ts`                                                                          |
 | Appointment states (`04-state-appointment.puml`) | each arrow                                               | one row of `TRANSITIONS` (`appointmentStateMachine.ts`) and one `POST /api/appointments/:id/<action>` endpoint                                               |
 |                                                  | each `[guard]`                                           | a case of `guardFailure` (`appointmentRules.ts`); the same rules produce `allowedActions` in every response                                                  |
@@ -154,19 +154,92 @@ Tests that keep code and diagrams in step: `appointmentStateMachine.test.ts` (ev
 
 ## UML diagrams
 
-PlantUML sources live in `docs/uml/`:
+PlantUML sources live in `docs/uml/`, and the rendered images in `docs/uml/svg/` (open an SVG on GitHub or in a browser to zoom in):
 
-| File                                 | Diagram                                                       |
-| ------------------------------------ | ------------------------------------------------------------- |
-| `01-use-cases.puml`                  | Use cases per actor                                           |
-| `02-class-domain.puml`               | Domain model (entities, enumerations, constraints)            |
-| `03-class-architecture.puml`         | Server classes by layer (controllers, services, repositories) |
-| `04-state-appointment.puml`          | Appointment state machine with guards                         |
-| `05-sequence-patient-books.puml`     | Sequence: patient books an appointment                        |
-| `06-sequence-doctor-calls-next.puml` | Sequence: doctor calls the next patient                       |
-| `07-sequence-admin-copies-week.puml` | Sequence: admin copies the previous week's roster             |
+| Diagram                                                     | Source                                                                                        | Image                                                                                           |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Use cases per actor                                         | [01-use-cases.puml](docs/uml/01-use-cases.puml)                                               | [01-use-cases.svg](docs/uml/svg/01-use-cases.svg)                                               |
+| Domain model (entities, enumerations, constraints)          | [02-class-domain.puml](docs/uml/02-class-domain.puml)                                         | [02-class-domain.svg](docs/uml/svg/02-class-domain.svg)                                         |
+| Server classes by layer (1/2): booking, appointments, queue | [03a-class-architecture-appointments.puml](docs/uml/03a-class-architecture-appointments.puml) | [03a-class-architecture-appointments.svg](docs/uml/svg/03a-class-architecture-appointments.svg) |
+| Server classes by layer (2/2): administration               | [03b-class-architecture-admin.puml](docs/uml/03b-class-architecture-admin.puml)               | [03b-class-architecture-admin.svg](docs/uml/svg/03b-class-architecture-admin.svg)               |
+| Appointment state machine with guards                       | [04-state-appointment.puml](docs/uml/04-state-appointment.puml)                               | [04-state-appointment.svg](docs/uml/svg/04-state-appointment.svg)                               |
+| Sequence: patient books an appointment                      | [05-sequence-patient-books.puml](docs/uml/05-sequence-patient-books.puml)                     | [05-sequence-patient-books.svg](docs/uml/svg/05-sequence-patient-books.svg)                     |
+| Sequence: doctor calls the next patient                     | [06-sequence-doctor-calls-next.puml](docs/uml/06-sequence-doctor-calls-next.puml)             | [06-sequence-doctor-calls-next.svg](docs/uml/svg/06-sequence-doctor-calls-next.svg)             |
+| Sequence: admin copies the previous week's roster           | [07-sequence-admin-copies-week.puml](docs/uml/07-sequence-admin-copies-week.puml)             | [07-sequence-admin-copies-week.svg](docs/uml/svg/07-sequence-admin-copies-week.svg)             |
 
-To render them, use the VS Code "PlantUML" extension (Alt+D to preview, or "Export Current Diagram"), or the PlantUML jar (needs Java; the class and use case diagrams also need Graphviz): `java -jar plantuml.jar -tsvg docs/uml/*.puml`. Renderers that send the source to a server (such as the public PlantUML server) work too, if you don't mind uploading the diagram text.
+<details>
+<summary>Use cases</summary>
+
+![Use case diagram](docs/uml/svg/01-use-cases.svg)
+
+</details>
+
+<details>
+<summary>Domain model</summary>
+
+![Domain class diagram](docs/uml/svg/02-class-domain.svg)
+
+</details>
+
+<details>
+<summary>Server classes by layer (1/2): booking, appointments, queue</summary>
+
+![Layered class diagram: booking, appointments, queue](docs/uml/svg/03a-class-architecture-appointments.svg)
+
+</details>
+
+<details>
+<summary>Server classes by layer (2/2): administration</summary>
+
+![Layered class diagram: administration](docs/uml/svg/03b-class-architecture-admin.svg)
+
+</details>
+
+<details>
+<summary>Appointment states</summary>
+
+![Appointment state diagram](docs/uml/svg/04-state-appointment.svg)
+
+</details>
+
+<details>
+<summary>Sequence: patient books an appointment</summary>
+
+![Sequence diagram: patient books an appointment](docs/uml/svg/05-sequence-patient-books.svg)
+
+</details>
+
+<details>
+<summary>Sequence: doctor calls the next patient</summary>
+
+![Sequence diagram: doctor calls the next patient](docs/uml/svg/06-sequence-doctor-calls-next.svg)
+
+</details>
+
+<details>
+<summary>Sequence: admin copies the previous week's roster</summary>
+
+![Sequence diagram: admin copies the previous week's roster](docs/uml/svg/07-sequence-admin-copies-week.svg)
+
+</details>
+
+### Reading the diagrams
+
+- **Use cases:** an actor linked to a use case can perform it. `«include»` means the use case always runs the other one (booking always shows availability); `«extend»` means an optional addition (copying the previous week extends the roster editor). Codes such as `UC-P4` match the API table above.
+- **Domain model:** each class is a table in `schema.prisma`. `{PK}`, `{FK}`, `{unique}` mark keys, `[0..1]` marks an optional field, the numbers at line ends are multiplicities, and a filled diamond means the part belongs to the whole (an appointment to its roster entry).
+- **Server classes:** split in two so the lines stay readable (03a: login, booking, appointments, queue; 03b: administration). Packages go top to bottom from controllers to services and repositories, with the framework-free domain beside them. A solid arrow is a constructor dependency; a dashed arrow is a call into a domain module.
+- **Appointment states:** each arrow reads `action (roles) [guard] / effect` and is one row of `TRANSITIONS` plus one `POST /api/appointments/:id/<action>` endpoint. Moves that aren't drawn are rejected.
+- **Sequences:** read top to bottom, left (user) to right (database). Solid arrows are calls, dashed arrows are replies; `alt` boxes are the error branches with their HTTP status and error code, `group runInTransaction` is one database transaction.
+
+### Re-rendering
+
+After editing a `.puml` file, re-export the SVGs so the images stay in step with the sources. You need Java 17+, the [PlantUML jar](https://plantuml.com/download) and [Graphviz](https://graphviz.org/download/) (the use case and class diagrams are laid out with it):
+
+```bash
+java -jar plantuml.jar -charset UTF-8 -tsvg -o svg docs/uml/*.puml
+```
+
+If `dot` isn't on your `PATH`, add `-DGRAPHVIZ_DOT=<path to dot>` before `-jar`. Don't use `-Playout=smetana` (PlantUML's built-in engine): it tangles the lines in the use case and class diagrams. `-o svg` is relative to each source, so the files land in `docs/uml/svg/` named after their source. The sources contain layout hints (link order, `[norank]`, `-right-`); keep them when editing so lines don't cross. For a quick preview, use the VS Code "PlantUML" extension (Alt+D). Renderers that send the source to a server (such as the public PlantUML server) work too, if you don't mind uploading the diagram text.
 
 ## Known limitations
 
