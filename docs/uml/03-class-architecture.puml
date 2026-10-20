@@ -1,4 +1,4 @@
-@startuml class-architecture
+@startuml
 ' MediSchedule: boundary / control / entity view of the server (main use cases only).
 ' Layering: Controller -> Service -> Repository -> Prisma; domain/ is framework-free.
 ' Constructor dependencies match the singletons exported by each module.

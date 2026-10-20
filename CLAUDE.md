@@ -132,4 +132,4 @@ Never change or assume otherwise without asking the user:
 - [.claude/docs/date_logic.md](.claude/docs/date_logic.md): read before any date/time comparison, display, or time-dependent test.
 - [.claude/docs/i18n_and_errors.md](.claude/docs/i18n_and_errors.md): read before adding UI text, an error code, or a validation rule.
 - [.claude/docs/design_mapping.md](.claude/docs/design_mapping.md): read before starting a phase and after any design change (use cases, classes, states, sequences → code; change log).
-- `docs/uml/*.puml`: the UML diagrams as PlantUML. Keep them in step with the code when a design change touches them.
+- `docs/uml/*.puml`: the UML diagrams as PlantUML, rendered to `docs/uml/svg/`. Keep them in step with the code when a design change touches them, and re-export the SVGs (README "Re-rendering").

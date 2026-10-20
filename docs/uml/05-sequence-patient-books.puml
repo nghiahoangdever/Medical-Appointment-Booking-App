@@ -1,4 +1,4 @@
-@startuml sequence-patient-books
+@startuml
 ' MediSchedule: UC-P4 "Patient books an appointment" (includes UC-P3).
 ' Names match the code. Labels 6.1–6.8 are the steps in .claude/docs/design_mapping.md
 ' (numbered 1–8 in the comments of booking.service.ts). authenticate/requireRole run before
