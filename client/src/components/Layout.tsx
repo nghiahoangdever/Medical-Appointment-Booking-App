@@ -26,7 +26,7 @@ export function Layout() {
     <div className="min-h-screen">
       <DevClockBanner />
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <Logo />
           <nav className="order-last flex w-full gap-1 overflow-x-auto sm:order-none sm:w-auto sm:flex-1">
             {NAV_ITEMS[user.role].map((item) => (
@@ -59,7 +59,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="mx-auto max-w-7xl px-4 py-6">
         <Outlet />
       </main>
     </div>

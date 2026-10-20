@@ -6,6 +6,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { appointmentRouter } from './modules/appointments/appointment.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { availabilityRouter } from './modules/availability/availability.routes';
+import { queueRouter } from './modules/queue/queue.routes';
 import { shiftRouter } from './modules/shifts/shift.routes';
 import { specialtyRouter } from './modules/specialties/specialty.routes';
 
@@ -25,6 +26,7 @@ export function createApp() {
   app.use('/api/shifts', shiftRouter);
   app.use('/api/availability', availabilityRouter);
   app.use('/api/appointments', appointmentRouter);
+  app.use('/api', queueRouter); // /api/doctor/schedule, /api/roster-entries/:id/{queue,call-next}
 
   app.use(notFoundHandler);
   app.use(errorHandler);

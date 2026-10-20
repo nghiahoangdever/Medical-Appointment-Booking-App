@@ -84,6 +84,16 @@ export class AppointmentController {
     res.json({ appointment: await this.appointments.markNoShow(getAuthUser(req), id) });
   };
 
+  start = async (req: Request, res: Response) => {
+    const { id } = params.parse(req.params);
+    res.json({ appointment: await this.appointments.start(getAuthUser(req), id) });
+  };
+
+  complete = async (req: Request, res: Response) => {
+    const { id } = params.parse(req.params);
+    res.json({ appointment: await this.appointments.complete(getAuthUser(req), id) });
+  };
+
   addNote = async (req: Request, res: Response) => {
     const { id } = params.parse(req.params);
     const { content } = noteSchema.parse(req.body ?? {});

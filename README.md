@@ -4,6 +4,7 @@ Appointment booking for a multi-specialty clinic, built for a Software Analysis 
 
 **Roles:** Patient · Receptionist · Doctor · Admin
 **Stack:** React + Vite + Tailwind (client) · Express + Prisma + SQLite (server) · JWT auth · TypeScript throughout
+**Target:** desktop web browsers, 1280px wide and up. Mobile and responsive layouts are out of scope.
 
 ## Getting started
 
@@ -35,7 +36,7 @@ The seed creates a duty roster for **this week and next** (Mon–Sat, Morning 07
 
 Check-in is allowed only on the appointment day before the shift ends, and no-show only after the shift starts. To try these at night or on a Sunday:
 
-1. `npm run db:seed -w server`, then `npm run db:seed:today -w server`. This fills **today** with morning and afternoon queues for doctor1 (Nội tổng quát) and doctor3 (Nhi khoa): 7 booked, 3 checked in, 1 cancelled. It also adds patients 4–6.
+1. `npm run db:seed -w server`, then `npm run db:seed:today -w server`. This fills **today** with morning and afternoon queues for doctor1 (Nội tổng quát) and doctor3 (Nhi khoa): 6 booked, 4 checked in, 1 in examination, 1 completed, 1 cancelled. doctor3's morning is mid-shift. It also adds patients 4–8.
 2. Set `DEV_FAKE_NOW="09:00"` in `server/.env` and restart `npm run dev`. The server then acts as if it were 09:00 today, and the app shows an amber banner. Try `06:00`, `09:00`, `12:00` and `18:00` to see check-in and no-show appear and disappear. The expected buttons are listed in `.claude/docs/date_logic.md`.
 3. Set `DEV_FAKE_NOW=""` and restart to go back to the real clock. The setting is refused when `NODE_ENV=production`, and tests ignore it.
 
@@ -108,9 +109,16 @@ client/src/
 | `POST /api/appointments/:id/cancel`                                | Patient, Receptionist, Admin | UC-P7/R4     |
 | `GET /api/appointments?date&shiftId&specialtyId&doctorId&status&q` | Receptionist, Admin          | UC-R1/R2     |
 | `POST /api/appointments/:id/check-in`                              | Receptionist                 | UC-R3        |
-| `POST /api/appointments/:id/no-show`                               | Receptionist                 | UC-R5        |
-| `POST /api/appointments/:id/notes`                                 | Receptionist                 | UC-R7        |
+| `POST /api/appointments/:id/no-show`                               | Receptionist, Doctor         | UC-R5/D6     |
+| `POST /api/appointments/:id/notes`                                 | Receptionist, Doctor         | UC-R7/D8     |
 | `GET /api/shifts`                                                  | any                          | filters      |
+| `GET /api/doctor/schedule`                                         | Doctor                       | UC-D1        |
+| `GET /api/roster-entries/:id/queue`                                | Doctor (own shift)           | UC-D2        |
+| `POST /api/roster-entries/:id/call-next`                           | Doctor (own shift)           | UC-D3        |
+| `POST /api/appointments/:id/start`                                 | Doctor (own shift)           | UC-D4        |
+| `POST /api/appointments/:id/complete`                              | Doctor (own shift)           | UC-D5        |
+
+Doctors only see and act on appointments in their own shifts. Each doctor examines one patient at a time, across all their shifts that day.
 
 Every appointment in a response carries `allowedActions`: what the current user can do with it right now, according to the state machine and the shift times. The UI shows only those buttons.
 
@@ -136,6 +144,6 @@ Every appointment in a response carries `allowedActions`: what the current user 
 - [x] **Vietnamese UI:** error codes from the server, translations in the client, dd/MM/yyyy dates
 - [x] **Phase 2:** patient booking (availability, booking wizard, my appointments, cancel), appointment state machine
 - [x] **Phase 3:** reception (day list with filters, search, check-in, cancel, no-show, notes, patient details)
-- [ ] Phase 4: doctor queue (call next, complete, no-show, notes, polling)
+- [x] **Phase 4:** doctor queue (duty schedule, shift queue, call next, start, complete, no-show, notes, polling)
 - [ ] Phase 5: admin management (specialties, rooms, staff, shift times, weekly roster)
-- [ ] Phase 6: polish and end-to-end tests
+- [ ] Phase 6: polish (error/empty states) and end-to-end tests

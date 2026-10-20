@@ -14,13 +14,19 @@ const at = (day: number, hours: number, minutes = 0) => new Date(2026, 9, day, h
 const booked: AppointmentFacts = {
   status: 'BOOKED',
   patientId: 7,
+  doctorUserId: 20,
   date: '2026-10-20',
   shiftStart: '07:30',
   shiftEnd: '11:30',
+  doctorInExamination: 0,
 };
+const checkedIn: AppointmentFacts = { ...booked, status: 'CHECKED_IN' };
+const inExam: AppointmentFacts = { ...booked, status: 'IN_EXAMINATION', doctorInExamination: 1 };
 const receptionist = { id: 1, role: Role.RECEPTIONIST };
 const owner = { id: 7, role: Role.PATIENT };
 const otherPatient = { id: 8, role: Role.PATIENT };
+const doctor = { id: 20, role: Role.DOCTOR };
+const otherDoctor = { id: 21, role: Role.DOCTOR };
 
 const codeOf = (...args: Parameters<typeof guardFailure>) => guardFailure(...args)?.code ?? null;
 
@@ -92,8 +98,48 @@ describe('allowedActions', () => {
   });
 
   it('reception has nothing to do once checked in (the doctor takes over)', () => {
-    expect(allowedActions({ ...booked, status: 'CHECKED_IN' }, receptionist, at(20, 9, 0))).toEqual(
-      [],
+    expect(allowedActions(checkedIn, receptionist, at(20, 9, 0))).toEqual([]);
+  });
+
+  it('doctor, CHECKED_IN: start (any time that day) and no-show (after shift start)', () => {
+    expect(allowedActions(checkedIn, doctor, at(20, 7, 0))).toEqual(['START']);
+    expect(allowedActions(checkedIn, doctor, at(20, 9, 0))).toEqual(['START', 'MARK_NO_SHOW']);
+  });
+
+  it('doctor, CHECKED_IN while examining someone else (any shift that day): no start', () => {
+    expect(allowedActions({ ...checkedIn, doctorInExamination: 1 }, doctor, at(20, 9, 0))).toEqual([
+      'MARK_NO_SHOW',
+    ]);
+  });
+
+  it('doctor, IN_EXAMINATION: complete only; another doctor: nothing', () => {
+    expect(allowedActions(inExam, doctor, at(20, 9, 0))).toEqual(['COMPLETE']);
+    expect(allowedActions(inExam, otherDoctor, at(20, 9, 0))).toEqual([]);
+  });
+});
+
+describe('doctor guards', () => {
+  it('START: own queue, appointment date, doctor not examining anyone else', () => {
+    expect(codeOf(checkedIn, 'START', doctor, at(20, 9, 0))).toBeNull();
+    expect(codeOf(checkedIn, 'START', otherDoctor, at(20, 9, 0))).toBe('NOT_YOUR_PATIENT');
+    expect(codeOf(checkedIn, 'START', doctor, at(21, 9, 0))).toBe('EXAM_NOT_TODAY');
+    expect(codeOf({ ...checkedIn, doctorInExamination: 1 }, 'START', doctor, at(20, 9, 0))).toBe(
+      'DOCTOR_BUSY',
     );
+  });
+
+  it('COMPLETE: own queue only, no time limit', () => {
+    expect(codeOf(inExam, 'COMPLETE', doctor, at(20, 18, 0))).toBeNull();
+    expect(codeOf(inExam, 'COMPLETE', otherDoctor, at(20, 9, 0))).toBe('NOT_YOUR_PATIENT');
+  });
+
+  it('MARK_NO_SHOW by a doctor: own queue, after shift start (ownership checked first)', () => {
+    expect(codeOf(checkedIn, 'MARK_NO_SHOW', doctor, at(20, 7, 29))).toBe('NO_SHOW_TOO_EARLY');
+    expect(codeOf(checkedIn, 'MARK_NO_SHOW', doctor, at(20, 7, 30))).toBeNull();
+    expect(codeOf(checkedIn, 'MARK_NO_SHOW', otherDoctor, at(20, 7, 0))).toBe('NOT_YOUR_PATIENT');
+  });
+
+  it('reception no-show is not limited to a doctor', () => {
+    expect(codeOf(booked, 'MARK_NO_SHOW', receptionist, at(20, 9, 0))).toBeNull();
   });
 });

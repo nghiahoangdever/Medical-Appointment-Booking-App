@@ -5,6 +5,7 @@ import { Role, type AppointmentStatus } from '../../domain/enums';
 import { conflict, forbidden, notFound } from '../../domain/errors';
 import { systemClock, type Clock } from '../../domain/time';
 import { appClock } from '../../clock';
+import { runInTransaction, type Db } from '../../db/prisma';
 import {
   appointmentFacts,
   toAppointmentView,
@@ -74,12 +75,32 @@ export class AppointmentService {
     }));
   }
 
-  /** UC-R5: BOOKED → NO_SHOW, once the shift has started. */
+  /**
+   * UC-R5 / UC-D6: → NO_SHOW once the shift has started.
+   * Reception: BOOKED. Doctor: BOOKED or CHECKED_IN, own queue only.
+   */
   markNoShow(actor: Actor, appointmentId: number) {
     return this.perform(actor, appointmentId, AppointmentAction.MARK_NO_SHOW, () => ({}));
   }
 
-  /** UC-R7: add an internal staff note (any status). */
+  /**
+   * UC-D3 / UC-D4: CHECKED_IN → IN_EXAMINATION (own queue, today, and the doctor is not
+   * examining anyone else that day in any of their shifts).
+   */
+  start(actor: Actor, appointmentId: number) {
+    return this.perform(actor, appointmentId, AppointmentAction.START, (now) => ({
+      startedAt: now,
+    }));
+  }
+
+  /** UC-D5: IN_EXAMINATION → COMPLETED (own queue). */
+  complete(actor: Actor, appointmentId: number) {
+    return this.perform(actor, appointmentId, AppointmentAction.COMPLETE, (now) => ({
+      completedAt: now,
+    }));
+  }
+
+  /** UC-R7 / UC-D8: add an internal staff note (any status). */
   async addNote(
     actor: Actor,
     appointmentId: number,
@@ -96,7 +117,9 @@ export class AppointmentService {
 
   /**
    * One status change, following the state diagram:
-   * load → transition() (status + role) → guards (time, ownership) → conditional update.
+   * load → transition() (status + role) → guards (time, ownership, one exam at a time) →
+   * conditional update. Runs in a transaction so guards that look at other appointments
+   * (DOCTOR_BUSY) can't be raced by a concurrent request.
    */
   private async perform(
     actor: Actor,
@@ -104,34 +127,49 @@ export class AppointmentService {
     action: AppointmentAction,
     extraData: (now: Date) => StatusChangeData,
   ) {
-    const appointment = await this.findVisibleTo(actor, appointmentId);
-    const from = appointment.status as AppointmentStatus;
-    const to = transition(from, action, actor.role);
-
     const now = this.clock();
-    const blocked = guardFailure(appointmentFacts(appointment), action, actor, now);
-    if (blocked) throw blocked;
+    await runInTransaction(async (tx) => {
+      const appointment = await this.findVisibleTo(actor, appointmentId, tx);
+      const from = appointment.status as AppointmentStatus;
+      const to = transition(from, action, actor.role);
 
-    const updated = await this.appointments.updateStatus(appointment.id, from, {
-      status: to,
-      ...extraData(now),
-    });
-    if (!updated) {
-      throw conflict(
-        'APPOINTMENT_CHANGED',
-        'The appointment was changed by someone else; refresh and retry',
+      const blocked = guardFailure(appointmentFacts(appointment), action, actor, now);
+      if (blocked) throw blocked;
+
+      const updated = await this.appointments.updateStatus(
+        appointment.id,
+        from,
+        { status: to, ...extraData(now) },
+        tx,
       );
-    }
-    return toViewFor((await this.appointments.findById(appointment.id))!, actor, now);
+      if (!updated) {
+        throw conflict(
+          'APPOINTMENT_CHANGED',
+          'The appointment was changed by someone else; refresh and retry',
+        );
+      }
+    });
+    return toViewFor((await this.appointments.findById(appointmentId))!, actor, now);
   }
 
-  /** Patients only see their own appointments; for them, others' ids look nonexistent. */
-  private async findVisibleTo(actor: Actor, appointmentId: number): Promise<AppointmentRecord> {
-    const appointment = await this.appointments.findById(appointmentId);
-    if (!appointment || (actor.role === Role.PATIENT && appointment.patientId !== actor.id)) {
+  /**
+   * Patients see only their own appointments, doctors only those in their own roster entries;
+   * anything else looks nonexistent (404). Reception and admin see everything.
+   */
+  private async findVisibleTo(
+    actor: Actor,
+    appointmentId: number,
+    db?: Db,
+  ): Promise<AppointmentRecord> {
+    const appointment = await this.appointments.findById(appointmentId, db);
+    const hidden =
+      !appointment ||
+      (actor.role === Role.PATIENT && appointment.patientId !== actor.id) ||
+      (actor.role === Role.DOCTOR && appointment.rosterEntry.doctor.userId !== actor.id);
+    if (hidden) {
       throw notFound('APPOINTMENT_NOT_FOUND', `Appointment ${appointmentId} not found`);
     }
-    return appointment;
+    return appointment!;
   }
 }
 

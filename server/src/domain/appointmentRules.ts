@@ -18,9 +18,24 @@ export interface Actor {
 export interface AppointmentFacts {
   status: AppointmentStatus;
   patientId: number;
+  /** User id of the doctor whose roster entry the appointment belongs to. */
+  doctorUserId: number;
   date: string;
   shiftStart: string;
   shiftEnd: string;
+  /**
+   * How many appointments the same doctor has IN_EXAMINATION on the appointment's date,
+   * across all of their shifts (one patient at a time per doctor).
+   */
+  doctorInExamination: number;
+}
+
+/** Doctors may only act on appointments in their own roster entries. */
+function notOwnPatient(facts: AppointmentFacts, actor: Actor): AppError | null {
+  if (actor.role === Role.DOCTOR && facts.doctorUserId !== actor.id) {
+    return conflict('NOT_YOUR_PATIENT', 'Doctors can only act on their own shift queue');
+  }
+  return null;
 }
 
 /**
@@ -58,12 +73,28 @@ export function guardFailure(
       return null;
 
     case AppointmentAction.MARK_NO_SHOW:
-      if (!hasTimePassed(facts.date, facts.shiftStart, now)) {
-        return conflict('NO_SHOW_TOO_EARLY', 'No-show can only be marked after the shift starts');
-      }
-      return null;
+      // Reception: any appointment. Doctor: only in their own queue.
+      return (
+        notOwnPatient(facts, actor) ??
+        (hasTimePassed(facts.date, facts.shiftStart, now)
+          ? null
+          : conflict('NO_SHOW_TOO_EARLY', 'No-show can only be marked after the shift starts'))
+      );
 
-    // START / COMPLETE guards (doctor owns the roster entry, one patient at a time): Phase 4.
+    case AppointmentAction.START:
+      // Own queue, on the appointment date, and one patient at a time per doctor (all shifts).
+      return (
+        notOwnPatient(facts, actor) ??
+        (facts.date !== today(now)
+          ? conflict('EXAM_NOT_TODAY', 'Examinations can only start on the appointment date')
+          : facts.doctorInExamination > 0
+            ? conflict('DOCTOR_BUSY', 'Finish the patient currently in examination first')
+            : null)
+      );
+
+    case AppointmentAction.COMPLETE:
+      return notOwnPatient(facts, actor);
+
     default:
       return null;
   }

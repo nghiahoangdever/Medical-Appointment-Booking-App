@@ -48,9 +48,11 @@ export function appointmentFacts(a: AppointmentRecord): AppointmentFacts {
   return {
     status: a.status as AppointmentStatus,
     patientId: a.patientId,
+    doctorUserId: a.rosterEntry.doctor.userId,
     date: a.rosterEntry.date,
     shiftStart: a.rosterEntry.shift.startTime,
     shiftEnd: a.rosterEntry.shift.endTime,
+    doctorInExamination: a.doctorInExamination,
   };
 }
 

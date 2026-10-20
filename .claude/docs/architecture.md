@@ -24,7 +24,11 @@ Rules:
 - Express 5 forwards rejected promises from async handlers to `errorHandler`; do not wrap handlers in try/catch.
 - Appointment status is changed only via `transition()` + `guardFailure()` → see `appointment_state_machine.md`.
 - **Views are per viewer**: `appointment.mapper.ts` builds `AppointmentView` for patients and `StaffAppointmentView` (+ `patient`, `notes`) for staff (`toViewFor(record, viewer, now)`). Both include `allowedActions` computed for that viewer at that moment.
-- **No business rules in the client**: buttons are rendered from `allowedActions`; the client has no copy of time/ownership rules.
+- **No business rules in the client**: buttons are rendered from `allowedActions` (and the doctor queue's `nextAppointmentId`); the client has no copy of time/ownership rules.
+
+## UI target: desktop web only
+
+Target desktop browsers at **1280px width and above**. Mobile and responsive layouts are **out of scope**: don't add breakpoint variants (`sm:`, `md:`, …) or mobile-specific UI in new code, and use desktop patterns freely (tables, multi-column grids). The layout container is `max-w-7xl`. Some `sm:` classes from earlier phases remain; they're harmless and don't need to be removed.
 
 ## Folder structure
 
@@ -36,7 +40,7 @@ server/
   prisma/schema.prisma       data model (= class diagram)
   prisma/migrations/         committed migrations
   prisma/seed.ts             idempotent demo seed (wipes all tables first)
-  prisma/seed-today.ts       dev only: today's reception scenarios, created through the real services
+  prisma/seed-today.ts       dev only: today's reception + doctor scenarios, created through the real services
   src/
     server.ts                listen on config.PORT
     app.ts                   createApp(): cors, express.json, routers, notFoundHandler, errorHandler
@@ -54,11 +58,14 @@ server/
       specialties/           specialty.routes / .controller / .service / .repository
       doctors/               doctor.repository
       shifts/                shift.routes / .controller / .service / .repository
-      roster/                roster.repository (findSlots, takeNextQueueNumber)
+      roster/                roster.repository (findSlots, takeNextQueueNumber, findDutyShifts, findDutyEntry)
       availability/          availability.routes / .controller / .service
       appointments/          appointment.routes / .controller / booking.service / appointment.service /
-                             appointment.repository (findForStaff, countByStatus, updateStatus, …) /
-                             note.repository / appointment.mapper (AppointmentView, StaffAppointmentView)
+                             appointment.repository (findForStaff, countByStatus, findByRosterEntry,
+                             findFirstCheckedIn, findDoctorInExamination, updateStatus, …; every read
+                             attaches doctorInExamination) / note.repository /
+                             appointment.mapper (AppointmentView, StaffAppointmentView, appointmentFacts)
+      queue/                 queue.routes / .controller / .service (QueueService: getSchedule, getQueue, callNext)
   tests/                     vitest; globalSetup.ts, helpers/db.ts (resetDatabase), helpers/fixtures.ts
   vitest.config.ts           test env: DATABASE_URL=file:./test.db?connection_limit=1, fileParallelism: false
 client/
@@ -67,19 +74,22 @@ client/
     main.tsx, App.tsx        routes (react-router 7, imported from 'react-router')
     api/http.ts              fetch wrapper: relative /api URLs, Bearer token, throws ApiError(status, code, message, details)
     api/auth.ts              authApi
-    api/appointments.ts      appointmentsApi: book, mine, listForStaff, addNote, cancel, checkIn, markNoShow
+    api/appointments.ts      appointmentsApi: book, mine, listForStaff, addNote, cancel, checkIn, markNoShow, start, complete
     api/booking.ts           reference data: specialtiesApi, shiftsApi, availabilityApi
+    api/doctor.ts            doctorApi: schedule, queue, callNext
     auth/                    AuthContext (useAuth), ProtectedRoute({ roles? }), roles.ts (ROLE_HOME), tokenStorage.ts
     hooks/useApi.ts          useApi(load | null, { pollMs?, keepData? }) → { data, setData, error, loading, refresh }
     i18n/                    labels.ts (enum → Vietnamese), errors.ts (error code → Vietnamese)
     lib/date.ts              dd/MM/yyyy formatting/parsing, addDays, ageOn (no business time rules)
     components/              Layout (nav per role + DevClockBanner), AppointmentCard (expandable; title/subtitle overridable),
-                             CancelAppointment (shared patient/staff), PatientInfo, AppointmentNotes, StatusBadge,
-                             RefreshButton, EmptyState, PageHeader, Logo,
+                             StaffActions (buttons for every staff action in allowedActions: check-in, start, complete,
+                             no-show + CancelAppointment), CancelAppointment (shared patient/staff), PatientInfo,
+                             AppointmentNotes, StatusBadge, RefreshButton, EmptyState, PageHeader, Logo,
                              ui/ (Button — defaults to type="button", FormField: TextField/SelectField/TextAreaField, Alert, PageSpinner)
     pages/                   auth/ (Login, Register), patient/ (MyAppointmentsPage, booking/ wizard),
-                             reception/ (ReceptionPage, ReceptionActions, DayNavigator, StatusFilter),
-                             RoleHome (placeholder dashboard for Doctor/Admin), NotFoundPage
+                             reception/ (ReceptionPage, DayNavigator, StatusFilter),
+                             doctor/ (DoctorSchedulePage, DoctorQueuePage),
+                             RoleHome (placeholder dashboard for Admin), NotFoundPage
     types/index.ts           API response shapes (hand-mirrored from server views)
 ```
 
@@ -120,10 +130,12 @@ Auth: JWT signed with `JWT_SECRET`, `sub` = user id, payload `{ role }`, expiry 
 | `GET /api/appointments?date&shiftId&specialtyId&doctorId&status&q` → `{ appointments, counts }` (`date` or `q` required; `q` = part of code or phone, all dates; max 200 rows) | RECEPTIONIST, ADMIN              | implemented       |
 | `POST /api/appointments/:id/cancel` (body `{ reason? }` optional)                                                                                                              | PATIENT, RECEPTIONIST, ADMIN     | implemented       |
 | `POST /api/appointments/:id/check-in`                                                                                                                                          | RECEPTIONIST                     | implemented       |
-| `POST /api/appointments/:id/no-show`                                                                                                                                           | RECEPTIONIST (DOCTOR in Phase 4) | implemented       |
-| `POST /api/appointments/:id/notes` (body `{ content }`, 1–1000 chars) → 201                                                                                                    | RECEPTIONIST (DOCTOR in Phase 4) | implemented       |
-| `POST /api/appointments/:id/start`, `/complete`                                                                                                                                | DOCTOR                           | planned (Phase 4) |
-| `GET /api/doctor/queue`, `POST /api/roster-entries/:id/call-next`                                                                                                              | DOCTOR                           | planned (Phase 4) |
+| `POST /api/appointments/:id/no-show`                                                                                                                                           | RECEPTIONIST, DOCTOR (own queue) | implemented       |
+| `POST /api/appointments/:id/notes` (body `{ content }`, 1–1000 chars) → 201                                                                                                    | RECEPTIONIST, DOCTOR (own queue) | implemented       |
+| `POST /api/appointments/:id/start`, `/complete`                                                                                                                                | DOCTOR (own queue)               | implemented       |
+| `GET /api/doctor/schedule` → `{ shifts: DutyShift[] }` (today … today+13, per-status counts)                                                                                   | DOCTOR                           | implemented       |
+| `GET /api/roster-entries/:id/queue` → `{ entry, appointments, nextAppointmentId, inExaminationElsewhere }`                                                                     | DOCTOR (own entry; else 404)     | implemented       |
+| `POST /api/roster-entries/:id/call-next` → `{ appointment }`                                                                                                                   | DOCTOR (own entry; else 404)     | implemented       |
 | Admin CRUD (specialties, rooms, doctors, receptionists, shifts, roster)                                                                                                        | ADMIN                            | planned (Phase 5) |
 
 ## Testing
@@ -132,4 +144,5 @@ Auth: JWT signed with `JWT_SECRET`, `sub` = user id, payload `{ role }`, expiry 
 - `globalSetup.ts` deletes and recreates `server/prisma/test.db` via `prisma migrate deploy` once per run; `dev.db` is never touched.
 - Each test file calls `resetDatabase()` in `beforeEach` and builds data with `helpers/fixtures.ts` (`createClinic`, `createPatient`, `createStaff`, `addRoster`, `bearer(user)`).
 - Service-level tests use fixed clocks (`new BookingService(..., () => new Date(2026, 9, 20, 9, 0))`, `new AppointmentService(appointmentRepository, noteRepository, clock)`); API tests use the real clock with dates relative to `today()`.
-- Guards are tested as pure functions in `appointmentRules.test.ts`; reception flows in `reception.service.test.ts` (fixed clocks) and `reception.api.test.ts` (HTTP).
+- Guards are tested as pure functions in `appointmentRules.test.ts`; reception flows in `reception.service.test.ts` (fixed clocks) and `reception.api.test.ts` (HTTP); doctor flows in `queue.service.test.ts` (fixed clocks, incl. concurrent "call next") and `doctor.api.test.ts` (HTTP).
+- The `queueRouter` is mounted at `/api` with middleware **per route** (not `router.use`), so unknown `/api` paths still reach the 404 handler; `doctor.api.test.ts` checks this.

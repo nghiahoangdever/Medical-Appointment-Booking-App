@@ -1,6 +1,6 @@
 // AppointmentService reception features against the test database, with fixed clocks.
-// Appointments are booked at 06:00 on 20/10/2026 for that day's Morning (07:30â€“11:30)
-// and Afternoon (13:00â€“17:00) shifts.
+// Appointments are booked at 06:00 on 20/10/2026 for that day's Morning (07:30–11:30)
+// and Afternoon (13:00–17:00) shifts.
 
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { Role } from '../src/domain/enums';
@@ -146,14 +146,10 @@ describe('markNoShow', () => {
 describe('staff cancel', () => {
   it('works after the shift has started and records who cancelled', async () => {
     const appt = await bookToday('morning');
-    const result = await serviceAt(10).cancel(
-      receptionist,
-      appt.id,
-      'Bá»‡nh nhÃ¢n gá»i bÃ¡o há»§y',
-    );
+    const result = await serviceAt(10).cancel(receptionist, appt.id, 'Bệnh nhân gọi báo hủy');
     expect(result).toMatchObject({
       status: 'CANCELLED',
-      cancelReason: 'Bá»‡nh nhÃ¢n gá»i bÃ¡o há»§y',
+      cancelReason: 'Bệnh nhân gọi báo hủy',
     });
     const row = await prisma.appointment.findUnique({ where: { id: appt.id } });
     expect(row?.cancelledById).toBe(receptionist.id);
@@ -163,12 +159,9 @@ describe('staff cancel', () => {
 describe('addNote', () => {
   it('adds notes in order with author, returned in the staff view', async () => {
     const appt = await bookToday('morning');
-    await serviceAt(8).addNote(receptionist, appt.id, 'Bá»‡nh nhÃ¢n Ä‘áº¿n sá»›m');
-    const result = await serviceAt(9).addNote(receptionist, appt.id, 'ÄÃ£ Ä‘o huyáº¿t Ã¡p');
-    expect(result.notes.map((n) => n.content)).toEqual([
-      'Bá»‡nh nhÃ¢n Ä‘áº¿n sá»›m',
-      'ÄÃ£ Ä‘o huyáº¿t Ã¡p',
-    ]);
+    await serviceAt(8).addNote(receptionist, appt.id, 'Bệnh nhân đến sớm');
+    const result = await serviceAt(9).addNote(receptionist, appt.id, 'Đã đo huyết áp');
+    expect(result.notes.map((n) => n.content)).toEqual(['Bệnh nhân đến sớm', 'Đã đo huyết áp']);
     expect(result.notes[0].author.role).toBe('RECEPTIONIST');
   });
 

@@ -6,6 +6,8 @@
 // doctor3 (Nhi khoa, A1-03), deletes their existing appointments for today, then books and
 // moves appointments through the real services with simulated clocks (booked at 06:00,
 // checked in at 07:15, …), so every status change goes through the state machine.
+// doctor3's morning ends up mid-shift (one completed, one in examination, one waiting);
+// doctor1 has a waiting patient in the morning and one checked in early for the afternoon.
 // Combine with DEV_FAKE_NOW in server/.env to test time rules at any hour (see CLAUDE.md).
 // Requires the main seed (npm run db:seed -w server) to have run first.
 
@@ -62,6 +64,20 @@ const EXTRA_PATIENTS = [
     dateOfBirth: '2019-05-09',
     gender: Gender.MALE,
   },
+  {
+    email: 'patient7@example.com',
+    fullName: 'Lý Thanh Tâm',
+    phone: '0911000007',
+    dateOfBirth: '2017-11-02',
+    gender: Gender.FEMALE,
+  },
+  {
+    email: 'patient8@example.com',
+    fullName: 'Hồ Minh Khang',
+    phone: '0911000008',
+    dateOfBirth: '2020-03-14',
+    gender: Gender.MALE,
+  },
 ];
 
 async function findDoctor(email: string, roomCode: string) {
@@ -79,6 +95,7 @@ async function main() {
     where: { email: 'reception1@medischedule.local' },
   });
   const reception = { id: receptionistUser.id, role: Role.RECEPTIONIST };
+  const pediatricDoctor = { id: pediatric.userId, role: Role.DOCTOR };
 
   // Roster entries for today (kept if the main seed already created them).
   for (const doctor of [internal, pediatric]) {
@@ -106,7 +123,7 @@ async function main() {
     }
   }
 
-  // Patients 1–3 come from the main seed; 4–6 are created here if missing.
+  // Patients 1–3 come from the main seed; 4–8 are created here if missing.
   const passwordHash = await bcrypt.hash('password123', 10);
   for (const { dateOfBirth, gender, ...user } of EXTRA_PATIENTS) {
     await prisma.user.upsert({
@@ -121,11 +138,11 @@ async function main() {
     });
   }
   const patients = await Promise.all(
-    [1, 2, 3, 4, 5, 6].map((n) =>
+    [1, 2, 3, 4, 5, 6, 7, 8].map((n) =>
       prisma.user.findUniqueOrThrow({ where: { email: `patient${n}@example.com` } }),
     ),
   );
-  const [p1, p2, p3, p4, p5, p6] = patients;
+  const [p1, p2, p3, p4, p5, p6, p7, p8] = patients;
 
   const book = (
     patient: { id: number },
@@ -151,14 +168,27 @@ async function main() {
   await serviceAt(6, 30).cancel({ id: p4.id, role: Role.PATIENT }, m4.id, 'Bận việc đột xuất');
   await book(p5, internal, morning.id, 'Khám sức khỏe định kỳ');
 
-  // Morning — Nhi khoa
+  // Morning — Nhi khoa (doctor3 is mid-shift: one done, one in examination, one waiting)
   const n1 = await book(p6, pediatric, morning.id, 'Sốt 38.5°C, biếng ăn');
   await serviceAt(7, 20).checkIn(reception, n1.id);
   await book(p4, pediatric, morning.id, 'Khám cho con: phát ban');
+  const n3 = await book(p7, pediatric, morning.id, 'Ho có đờm 1 tuần');
+  await serviceAt(7, 25).checkIn(reception, n3.id);
+  const n4 = await book(p8, pediatric, morning.id, 'Đau bụng, nôn');
+  await serviceAt(7, 30).checkIn(reception, n4.id);
+  await serviceAt(7, 40).start(pediatricDoctor, n1.id);
+  await serviceAt(7, 50).addNote(
+    pediatricDoctor,
+    n1.id,
+    'Viêm họng cấp. Kê hạ sốt, tái khám sau 3 ngày.',
+  );
+  await serviceAt(7, 55).complete(pediatricDoctor, n1.id);
+  await serviceAt(7, 56).start(pediatricDoctor, n3.id);
 
-  // Afternoon — Nội tổng quát
+  // Afternoon — Nội tổng quát (one patient already waiting before the shift starts)
   await book(p1, internal, afternoon.id, 'Lấy kết quả xét nghiệm máu');
-  await book(p2, internal, afternoon.id);
+  const a2 = await book(p2, internal, afternoon.id);
+  await serviceAt(12, 45).checkIn(reception, a2.id);
 
   // Afternoon — Nhi khoa
   const a3 = await book(p3, pediatric, afternoon.id, 'Tiêm nhắc lại');
@@ -171,7 +201,7 @@ async function main() {
     _count: { _all: true },
   });
   console.log(
-    `Seeded today's (${DATE}) reception scenarios: ` +
+    `Seeded today's (${DATE}) reception and doctor scenarios: ` +
       counts.map((c) => `${c.status} ${c._count._all}`).join(', ') +
       '.\nUse DEV_FAKE_NOW in server/.env (e.g. "06:00", "09:00", "12:00", "18:00") to test time rules.',
   );

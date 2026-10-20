@@ -8,6 +8,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
 import { PatientInfo } from '../../components/PatientInfo';
 import { RefreshButton } from '../../components/RefreshButton';
+import { StaffActions } from '../../components/StaffActions';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { SelectField, TextField } from '../../components/ui/FormField';
@@ -18,7 +19,6 @@ import { doctorName, shiftLabel } from '../../i18n/labels';
 import { formatDateLong, todayIso } from '../../lib/date';
 import type { AppointmentStatus, StaffAppointment, StaffAppointmentFilters } from '../../types';
 import { DayNavigator } from './DayNavigator';
-import { ReceptionActions } from './ReceptionActions';
 import { StatusFilter } from './StatusFilter';
 
 const POLL_MS = 30_000;
@@ -194,7 +194,7 @@ export function ReceptionPage() {
                     appointment={a}
                     title={a.patient.fullName}
                     subtitle={`${a.specialty.name} · ${doctorName(a.doctor)} · Phòng ${a.room.code}`}
-                    actions={<ReceptionActions appointment={a} onDone={handleDone} />}
+                    actions={<StaffActions appointment={a} onDone={handleDone} />}
                   >
                     <PatientInfo patient={a.patient} />
                     <AppointmentNotes appointment={a} onAdded={() => void refresh()} />
