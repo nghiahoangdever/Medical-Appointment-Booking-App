@@ -4,6 +4,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app';
 import { Role } from '../src/domain/enums';
 import { prisma, resetDatabase } from './helpers/db';
+import { bearer, createStaff } from './helpers/fixtures';
 
 const app = createApp();
 
@@ -148,6 +149,47 @@ describe('GET /api/auth/me', () => {
     const res = await request(app).get('/api/auth/me').set('Authorization', 'Bearer abc.def.ghi');
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('INVALID_TOKEN');
+  });
+});
+
+describe('account checks on every authenticated request', () => {
+  const staffList = (token: string) =>
+    request(app).get('/api/appointments?date=2026-10-20').set('Authorization', token);
+
+  it('rejects a still-valid token once the account is deactivated (403 ACCOUNT_DISABLED)', async () => {
+    const receptionist = await createStaff(Role.RECEPTIONIST);
+    const token = bearer(receptionist);
+    expect((await staffList(token)).status).toBe(200);
+
+    await prisma.user.update({ where: { id: receptionist.id }, data: { isActive: false } });
+
+    const res = await staffList(token);
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('ACCOUNT_DISABLED');
+    const me = await request(app).get('/api/auth/me').set('Authorization', token);
+    expect(me.body.error.code).toBe('ACCOUNT_DISABLED');
+
+    // Reactivated: the same token works again.
+    await prisma.user.update({ where: { id: receptionist.id }, data: { isActive: true } });
+    expect((await staffList(token)).status).toBe(200);
+  });
+
+  it('rejects a token whose account no longer exists (401 INVALID_TOKEN)', async () => {
+    const receptionist = await createStaff(Role.RECEPTIONIST);
+    const token = bearer(receptionist);
+    await prisma.user.delete({ where: { id: receptionist.id } });
+    const res = await staffList(token);
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('INVALID_TOKEN');
+  });
+
+  it('uses the role from the database, not the one in the token', async () => {
+    const receptionist = await createStaff(Role.RECEPTIONIST);
+    const token = bearer(receptionist);
+    await prisma.user.update({ where: { id: receptionist.id }, data: { role: Role.PATIENT } });
+    const res = await staffList(token);
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
   });
 });
 

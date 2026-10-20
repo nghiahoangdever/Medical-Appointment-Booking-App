@@ -164,3 +164,93 @@ export interface BookingInput {
   shiftId: number;
   reason?: string;
 }
+
+// Admin (Phase 5)
+
+export interface AdminSpecialty {
+  id: number;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  activeDoctorCount: number;
+}
+
+export interface AdminRoom {
+  id: number;
+  code: string;
+  name: string;
+  floor: string | null;
+  isActive: boolean;
+}
+
+export interface AdminDoctor {
+  id: number;
+  userId: number;
+  fullName: string;
+  email: string;
+  phone: string;
+  isActive: boolean;
+  title: string;
+  bio: string | null;
+  specialty: { id: number; name: string; isActive: boolean };
+}
+
+export interface StaffAccount {
+  id: number;
+  fullName: string;
+  email: string;
+  phone: string;
+  role: Role;
+  isActive: boolean;
+}
+
+/** A roster entry in the admin week editor; `editable` / `deletable` / `minMaxPatients` come from the server. */
+export interface RosterEntry {
+  id: number;
+  date: string;
+  shiftId: number;
+  roomId: number;
+  doctor: {
+    id: number;
+    fullName: string;
+    title: string;
+    isActive: boolean;
+    specialty: { id: number; name: string };
+  };
+  maxPatients: number;
+  activeCount: number;
+  appointmentCount: number;
+  editable: boolean;
+  deletable: boolean;
+  minMaxPatients: number;
+}
+
+export interface RosterWeek {
+  weekStart: string;
+  weekEnd: string;
+  /** `editable`: entries can be added or changed on that day. */
+  days: { date: string; editable: boolean }[];
+  shifts: Shift[];
+  rooms: AdminRoom[];
+  doctors: {
+    id: number;
+    fullName: string;
+    title: string;
+    specialty: { id: number; name: string };
+  }[];
+  entries: RosterEntry[];
+}
+
+export interface CopyWeekResult {
+  sourceWeekStart: string;
+  created: number;
+  skipped: {
+    sourceEntryId: number;
+    date: string;
+    shiftId: number;
+    roomId: number;
+    doctorName: string;
+    /** Error code. */
+    reason: string;
+  }[];
+}

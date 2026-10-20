@@ -65,6 +65,63 @@ function toDutyEntry(e: DutyRecord): DutyEntry {
   };
 }
 
+/** A roster entry as the admin week editor needs it. */
+export interface AdminRosterEntry {
+  id: number;
+  date: string;
+  shiftId: number;
+  roomId: number;
+  doctor: {
+    id: number;
+    fullName: string;
+    title: string;
+    isActive: boolean;
+    specialty: { id: number; name: string };
+  };
+  maxPatients: number;
+  appointmentStatuses: AppointmentStatus[];
+}
+
+export interface NewRosterEntry {
+  doctorId: number;
+  roomId: number;
+  shiftId: number;
+  date: string;
+  maxPatients: number;
+}
+
+const adminInclude = {
+  doctor: {
+    include: {
+      user: { select: { fullName: true, isActive: true } },
+      specialty: { select: { id: true, name: true } },
+    },
+  },
+  appointments: { select: { status: true } },
+} as const;
+
+type AdminRecord = Awaited<
+  ReturnType<typeof prisma.rosterEntry.findFirstOrThrow<{ include: typeof adminInclude }>>
+>;
+
+function toAdminEntry(e: AdminRecord): AdminRosterEntry {
+  return {
+    id: e.id,
+    date: e.date,
+    shiftId: e.shiftId,
+    roomId: e.roomId,
+    doctor: {
+      id: e.doctor.id,
+      fullName: e.doctor.user.fullName,
+      title: e.doctor.title,
+      isActive: e.doctor.user.isActive,
+      specialty: e.doctor.specialty,
+    },
+    maxPatients: e.maxPatients,
+    appointmentStatuses: e.appointments.map((a) => a.status as AppointmentStatus),
+  };
+}
+
 export class RosterRepository {
   /** UC-D1: a doctor's roster entries between two dates, earliest first. */
   async findDutyShifts(
@@ -85,14 +142,22 @@ export class RosterRepository {
     return entry && toDutyEntry(entry);
   }
 
-  /** Roster entries of active doctors in a specialty, with their current booking counts. */
+  /**
+   * Bookable roster entries in a specialty, with their current booking counts. Only entries
+   * whose doctor, room and specialty are all active take new bookings.
+   */
   async findSlots(filter: RosterFilter, db: Db = prisma): Promise<RosterSlot[]> {
     const entries = await db.rosterEntry.findMany({
       where: {
         date: { gte: filter.dateFrom, lte: filter.dateTo },
         shiftId: filter.shiftId,
         doctorId: filter.doctorId,
-        doctor: { specialtyId: filter.specialtyId, user: { isActive: true } },
+        room: { isActive: true },
+        doctor: {
+          specialtyId: filter.specialtyId,
+          user: { isActive: true },
+          specialty: { isActive: true },
+        },
       },
       include: {
         shift: true,
@@ -118,6 +183,61 @@ export class RosterRepository {
       maxPatients: e.maxPatients,
       activeCount: e._count.appointments,
     }));
+  }
+
+  // Admin roster editor (UC-A6 / UC-A7)
+
+  /** Entries between two dates with doctor, room, shift and appointment statuses. */
+  async findForWeek(
+    dateFrom: string,
+    dateTo: string,
+    db: Db = prisma,
+  ): Promise<AdminRosterEntry[]> {
+    const entries = await db.rosterEntry.findMany({
+      where: { date: { gte: dateFrom, lte: dateTo } },
+      include: adminInclude,
+      orderBy: [{ date: 'asc' }, { shift: { startTime: 'asc' } }, { room: { code: 'asc' } }],
+    });
+    return entries.map(toAdminEntry);
+  }
+
+  async findAdminEntry(id: number, db: Db = prisma): Promise<AdminRosterEntry | null> {
+    const entry = await db.rosterEntry.findUnique({ where: { id }, include: adminInclude });
+    return entry && toAdminEntry(entry);
+  }
+
+  /** The entry already occupying this doctor's or this room's date + shift, if any. */
+  findBySlot(
+    slot: { doctorId?: number; roomId?: number; date: string; shiftId: number },
+    db: Db = prisma,
+  ) {
+    return db.rosterEntry.findFirst({
+      where: {
+        doctorId: slot.doctorId,
+        roomId: slot.roomId,
+        date: slot.date,
+        shiftId: slot.shiftId,
+      },
+      select: { id: true },
+    });
+  }
+
+  async create(data: NewRosterEntry, db: Db = prisma): Promise<AdminRosterEntry> {
+    return toAdminEntry(await db.rosterEntry.create({ data, include: adminInclude }));
+  }
+
+  async update(
+    id: number,
+    data: { roomId?: number; maxPatients?: number },
+    db: Db = prisma,
+  ): Promise<AdminRosterEntry> {
+    return toAdminEntry(
+      await db.rosterEntry.update({ where: { id }, data, include: adminInclude }),
+    );
+  }
+
+  async delete(id: number, db: Db = prisma): Promise<void> {
+    await db.rosterEntry.delete({ where: { id } });
   }
 
   /** Atomically reserves the entry's next queue number and returns it. Numbers are never reused. */

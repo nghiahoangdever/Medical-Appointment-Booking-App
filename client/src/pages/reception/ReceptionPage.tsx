@@ -29,7 +29,18 @@ const ALL = { value: '', label: 'Tất cả' };
  * or search by code/phone across all dates; expand a card to see the patient, add notes,
  * check in, mark no-show or cancel. Refreshes every 30 s and on demand.
  */
-export function ReceptionPage() {
+interface ReceptionPageProps {
+  title?: string;
+  subtitle?: string;
+  /** Admins (UC-A8) read notes but cannot add them. */
+  canAddNotes?: boolean;
+}
+
+export function ReceptionPage({
+  title = 'Lịch hẹn',
+  subtitle = 'Check-in, hủy lịch và theo dõi bệnh nhân. Tự động làm mới mỗi 30 giây.',
+  canAddNotes = true,
+}: ReceptionPageProps = {}) {
   const [date, setDate] = useState(todayIso);
   const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState('');
@@ -83,8 +94,8 @@ export function ReceptionPage() {
   return (
     <>
       <PageHeader
-        title="Lịch hẹn"
-        subtitle="Check-in, hủy lịch và theo dõi bệnh nhân. Tự động làm mới mỗi 30 giây."
+        title={title}
+        subtitle={subtitle}
         actions={<RefreshButton onClick={() => void refresh()} loading={loading} />}
       />
 
@@ -197,7 +208,11 @@ export function ReceptionPage() {
                     actions={<StaffActions appointment={a} onDone={handleDone} />}
                   >
                     <PatientInfo patient={a.patient} />
-                    <AppointmentNotes appointment={a} onAdded={() => void refresh()} />
+                    <AppointmentNotes
+                      appointment={a}
+                      onAdded={() => void refresh()}
+                      readOnly={!canAddNotes}
+                    />
                   </AppointmentCard>
                 ))}
               </div>

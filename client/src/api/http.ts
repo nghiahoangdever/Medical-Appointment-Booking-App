@@ -24,7 +24,7 @@ export class ApiError extends Error {
 
 let onUnauthorized: (() => void) | null = null;
 
-/** Called when a logged-in request gets 401 (e.g. the token expired). */
+/** Called when a logged-in request gets 401 (token expired) or ACCOUNT_DISABLED (deactivated). */
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
@@ -48,8 +48,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
-    if (res.status === 401 && token) onUnauthorized?.();
     const err = data?.error;
+    // The session is over: token expired/invalid, or the account was deactivated meanwhile.
+    if (token && (res.status === 401 || err?.code === 'ACCOUNT_DISABLED')) onUnauthorized?.();
     throw new ApiError(
       res.status,
       err?.code ?? (res.status >= 500 ? 'INTERNAL_ERROR' : 'UNKNOWN_ERROR'),

@@ -34,17 +34,20 @@ zod: `dateString()` in `server/src/validation.ts` validates with `isValidDateStr
 
 ## Rules built on these
 
-| Rule                                                  | Check                                                                                                                | Status                                     |
-| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| Booking window                                        | `today ≤ date ≤ today + 13` (`bookingWindow(now)`, `BOOKING_WINDOW_DAYS = 14`)                                       | implemented                                |
-| Can't book a started shift                            | `hasTimePassed(date, shift.startTime, now)` → `SHIFT_ALREADY_STARTED`                                                | implemented                                |
-| Availability status `STARTED`                         | same check per day/shift                                                                                             | implemented                                |
-| Patient cancel deadline                               | `hasTimePassed(date, shift.startTime, now)` → `CANCEL_DEADLINE_PASSED`                                               | implemented                                |
-| Date of birth not in future                           | `dateOfBirth <= today()` → `DATE_OF_BIRTH_IN_FUTURE`                                                                 | implemented                                |
-| Check-in only on the visit date, before shift end     | `date === today(now)` (`CHECK_IN_NOT_TODAY`) and `!hasTimePassed(date, shift.endTime, now)` (`CHECK_IN_SHIFT_ENDED`) | implemented (`domain/appointmentRules.ts`) |
-| No-show only after shift start (reception and doctor) | `hasTimePassed(date, shift.startTime, now)` (`NO_SHOW_TOO_EARLY`)                                                    | implemented (`domain/appointmentRules.ts`) |
-| Start an examination only on the appointment date     | `date === today(now)` (`EXAM_NOT_TODAY`); no shift-time limit (early start / overtime allowed)                       | implemented (`domain/appointmentRules.ts`) |
-| Complete an examination                               | no time limit                                                                                                        | implemented                                |
+| Rule                                                   | Check                                                                                                                | Status                                     |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Booking window                                         | `today ≤ date ≤ today + 13` (`bookingWindow(now)`, `BOOKING_WINDOW_DAYS = 14`)                                       | implemented                                |
+| Can't book a started shift                             | `hasTimePassed(date, shift.startTime, now)` → `SHIFT_ALREADY_STARTED`                                                | implemented                                |
+| Availability status `STARTED`                          | same check per day/shift                                                                                             | implemented                                |
+| Patient cancel deadline                                | `hasTimePassed(date, shift.startTime, now)` → `CANCEL_DEADLINE_PASSED`                                               | implemented                                |
+| Date of birth not in future                            | `dateOfBirth <= today()` → `DATE_OF_BIRTH_IN_FUTURE`                                                                 | implemented                                |
+| Check-in only on the visit date, before shift end      | `date === today(now)` (`CHECK_IN_NOT_TODAY`) and `!hasTimePassed(date, shift.endTime, now)` (`CHECK_IN_SHIFT_ENDED`) | implemented (`domain/appointmentRules.ts`) |
+| No-show only after shift start (reception and doctor)  | `hasTimePassed(date, shift.startTime, now)` (`NO_SHOW_TOO_EARLY`)                                                    | implemented (`domain/appointmentRules.ts`) |
+| Start an examination only on the appointment date      | `date === today(now)` (`EXAM_NOT_TODAY`); no shift-time limit (early start / overtime allowed)                       | implemented (`domain/appointmentRules.ts`) |
+| Complete an examination                                | no time limit                                                                                                        | implemented                                |
+| Roster entries: past days read-only                    | `date < today(now)` → `ROSTER_DATE_IN_PAST` (create, update, delete, copy target)                                    | implemented (`domain/rosterRules.ts`)      |
+| Roster week starts on Monday                           | `dayOfWeek(weekStart) === 0` → `WEEK_START_NOT_MONDAY`                                                               | implemented (roster controller)            |
+| Deactivation guard looks at appointments from today on | `rosterEntry.date >= today(now)` and status open                                                                     | implemented (`countUpcomingOpen`)          |
 
 The cancel / check-in / no-show / start rules live only in `domain/appointmentRules.ts`; the API sends the result as `allowedActions`.
 

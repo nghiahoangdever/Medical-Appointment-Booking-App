@@ -12,10 +12,16 @@ import { TextAreaField } from './ui/FormField';
 interface AppointmentNotesProps {
   appointment: StaffAppointment;
   onAdded: (updated: StaffAppointment) => void;
+  /** Show the notes without the add form (admins can read but not write notes). */
+  readOnly?: boolean;
 }
 
 /** UC-R7 / UC-D8: internal staff notes (never shown to patients) with an add form. */
-export function AppointmentNotes({ appointment, onAdded }: AppointmentNotesProps) {
+export function AppointmentNotes({
+  appointment,
+  onAdded,
+  readOnly = false,
+}: AppointmentNotesProps) {
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -57,20 +63,22 @@ export function AppointmentNotes({ appointment, onAdded }: AppointmentNotesProps
           ))}
         </ul>
       )}
-      <form onSubmit={submit} className="space-y-2" noValidate>
-        {error !== null && !fieldError && <Alert>{errorMessage(error)}</Alert>}
-        <TextAreaField
-          label="Thêm ghi chú"
-          rows={2}
-          maxLength={1000}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          error={fieldError}
-        />
-        <Button type="submit" variant="secondary" loading={saving} disabled={!content.trim()}>
-          Lưu ghi chú
-        </Button>
-      </form>
+      {!readOnly && (
+        <form onSubmit={submit} className="space-y-2" noValidate>
+          {error !== null && !fieldError && <Alert>{errorMessage(error)}</Alert>}
+          <TextAreaField
+            label="Thêm ghi chú"
+            rows={2}
+            maxLength={1000}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            error={fieldError}
+          />
+          <Button type="submit" variant="secondary" loading={saving} disabled={!content.trim()}>
+            Lưu ghi chú
+          </Button>
+        </form>
+      )}
     </section>
   );
 }

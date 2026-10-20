@@ -45,7 +45,7 @@ Run from the repo root unless noted.
 | Browse data                                         | `npm run db:studio -w server`                                                                 |
 | Build client                                        | `npm run build -w client` (server has no build; `npm run start -w server` runs it with tsx)   |
 
-- Demo accounts (all `password123`): `admin@medischedule.local`, `reception1@medischedule.local`, `doctor1@medischedule.local`…`doctor6@…`, `patient1@example.com`…`patient3@…`.
+- Demo accounts (all `password123`): `admin@medischedule.local`, `reception1@medischedule.local`, `doctor1@medischedule.local`…`doctor6@…`, `patient1@example.com`…`patient3@…` (4–8 after `db:seed:today`). The admin lands on the roster editor (`/admin/roster`).
 - Tests use `server/prisma/test.db`, recreated each run; they never touch `dev.db`.
 - npm 11 blocks dependency install scripts unless listed in `allowScripts` (root `package.json`). Prisma and esbuild are approved; a new dependency with install scripts needs `npm install-scripts approve <pkg>` — ask first.
 - Before declaring work done: `npm run typecheck`, `npm run lint`, `npm test` all pass.
@@ -78,6 +78,15 @@ Use it to test check-in (only before shift end), no-show (only after shift start
   Every appointment response carries `allowedActions` (state machine + guards for the viewer); the UI shows only those buttons.
 
 - **Doctor queue**: call order is the lowest `queueNumber` among CHECKED_IN. "Call next" = `QueueService.callNext` → `AppointmentService.start`.
+- **Roster rules** (`server/src/domain/rosterRules.ts` + `RosterService`):
+  - one entry per doctor, and one per room, per date + shift;
+  - only active doctors and rooms can be rostered;
+  - past days are read-only;
+  - `maxPatients` can't go below the active bookings;
+  - an entry can be deleted only if it never had an appointment;
+  - "copy previous week" skips what can't be placed and reports why.
+- **Auth**: every authenticated request re-checks the account. Deactivated accounts get `ACCOUNT_DISABLED` immediately, and the role comes from the DB.
+- **Soft delete**: specialties, rooms and accounts are deactivated, never deleted. Deactivation is blocked while appointments from today on are still open. Bookings only go to entries whose doctor, room and specialty are all active.
 
 ## 5. Key Constraints
 
@@ -110,8 +119,8 @@ Never change or assume otherwise without asking the user:
 - Phase 2 – Patient booking (availability, wizard, my appointments, cancel), state machine: **done** (commit `5c11a9a`).
 - Phase 3 – Reception (day list + filters, search, check-in, no-show, staff cancel, notes, patient details, `allowedActions`, dev simulated clock): **done**.
 - Phase 4 – Doctor queue (duty schedule, shift queue, call next, start, complete, doctor no-show + notes, ownership and one-patient-per-doctor guards, 15 s polling; desktop-only scope): **done**.
-- **Next: Phase 5 – Admin**: specialties, rooms, doctors, receptionists, shift times, weekly roster + copy week.
-- Phase 6 – Polish: error/empty states, end-to-end API tests, README design map (planned). Mobile is out of scope.
+- Phase 5 – Admin (specialties, rooms, doctor/receptionist accounts with activate/deactivate, shift times, weekly roster editor with conflict/capacity/delete rules, copy previous week, all-appointments overview, account-active check on every request): **done**. Known limitation: a booked shift can't be reassigned to another doctor.
+- **Next: Phase 6 – Polish**: error/empty states, end-to-end API tests, README design map. Mobile is out of scope.
 
 ## 7. Additional Documentation
 

@@ -49,12 +49,17 @@ server/
     validation.ts            shared zod builders: dateString(), id()
     db/prisma.ts             prisma client, Db type, runInTransaction (maxWait 5s, timeout 10s)
     domain/                  enums.ts, errors.ts, time.ts, booking.ts, appointmentStateMachine.ts,
-                             appointmentRules.ts (Actor, guardFailure, allowedActions)
+                             appointmentRules.ts (Actor, guardFailure, allowedActions),
+                             rosterRules.ts (rosterDateFailure, capacityFailure, deleteFailure, rosterPermissions)
     middleware/              authenticate.ts (+ getAuthUser), requireRole.ts, errorHandler.ts (+ notFoundHandler)
     types/express.d.ts       adds req.user: { id, role }
     modules/
       auth/                  auth.routes / auth.controller / auth.service / token.ts (sign/verify JWT)
-      users/                 user.repository
+      users/                 user.repository, password.ts (hashPassword / verifyPassword)
+      admin/                 admin.routes.ts: the /api/admin router (authenticate + requireRole(ADMIN) for all),
+                             wiring the controllers below
+      rooms/                 room.repository / .service / .controller (UC-A2)
+      staff/                 staff.service / .controller (UC-A3 doctors, UC-A4 receptionists)
       specialties/           specialty.routes / .controller / .service / .repository
       doctors/               doctor.repository
       shifts/                shift.routes / .controller / .service / .repository
@@ -66,6 +71,9 @@ server/
                              attaches doctorInExamination) / note.repository /
                              appointment.mapper (AppointmentView, StaffAppointmentView, appointmentFacts)
       queue/                 queue.routes / .controller / .service (QueueService: getSchedule, getQueue, callNext)
+      roster/ (admin)        roster.service (RosterService: getWeek, createEntry, updateEntry, deleteEntry,
+                             copyPreviousWeek) / roster.controller (UC-A6 / UC-A7)
+      specialties/, shifts/  also expose admin methods (create / update / activate / deactivate; updateTimes)
   tests/                     vitest; globalSetup.ts, helpers/db.ts (resetDatabase), helpers/fixtures.ts
   vitest.config.ts           test env: DATABASE_URL=file:./test.db?connection_limit=1, fileParallelism: false
 client/
@@ -77,8 +85,10 @@ client/
     api/appointments.ts      appointmentsApi: book, mine, listForStaff, addNote, cancel, checkIn, markNoShow, start, complete
     api/booking.ts           reference data: specialtiesApi, shiftsApi, availabilityApi
     api/doctor.ts            doctorApi: schedule, queue, callNext
+    api/admin.ts             adminApi: specialties, rooms, doctors, receptionists, shift times, roster week/entries/copy
     auth/                    AuthContext (useAuth), ProtectedRoute({ roles? }), roles.ts (ROLE_HOME), tokenStorage.ts
     hooks/useApi.ts          useApi(load | null, { pollMs?, keepData? }) → { data, setData, error, loading, refresh }
+    hooks/useSubmit.ts       useSubmit() → { run(call), busy, error, setError } for one mutation at a time
     i18n/                    labels.ts (enum → Vietnamese), errors.ts (error code → Vietnamese)
     lib/date.ts              dd/MM/yyyy formatting/parsing, addDays, ageOn (no business time rules)
     components/              Layout (nav per role + DevClockBanner), AppointmentCard (expandable; title/subtitle overridable),
@@ -89,7 +99,9 @@ client/
     pages/                   auth/ (Login, Register), patient/ (MyAppointmentsPage, booking/ wizard),
                              reception/ (ReceptionPage, DayNavigator, StatusFilter),
                              doctor/ (DoctorSchedulePage, DoctorQueuePage),
-                             RoleHome (placeholder dashboard for Admin), NotFoundPage
+                             admin/ (roster/ RosterPage + RosterGrid + RosterEntryPanel, SpecialtiesPage, RoomsPage,
+                             DoctorsPage, ReceptionistsPage, ShiftsPage, AdminAppointmentsPage, shared.tsx),
+                             NotFoundPage. (RoleHome placeholder removed: every role has real pages.)
     types/index.ts           API response shapes (hand-mirrored from server views)
 ```
 
@@ -98,14 +110,14 @@ New server feature = new or extended folder under `modules/` with the same four-
 ## Request flow (example: `POST /api/appointments`)
 
 1. `app.ts` → `appointmentRouter` (`appointment.routes.ts`)
-2. `authenticate` verifies `Authorization: Bearer <jwt>`, sets `req.user = { id, role }` (401 `NOT_AUTHENTICATED` / `INVALID_TOKEN`)
+2. `authenticate` verifies `Authorization: Bearer <jwt>`, then re-reads the account (`AuthService.getCurrentUser`). It sets `req.user = { id, role }` with the role taken from the DB. Errors: 401 `NOT_AUTHENTICATED` / `INVALID_TOKEN`, or 403 `ACCOUNT_DISABLED`.
 3. `requireRole(Role.PATIENT)` (403 `FORBIDDEN`)
 4. `AppointmentController.book` → `bookSchema.parse(req.body)` (400 `VALIDATION_ERROR` with per-field codes)
 5. `BookingService.book(patientId, input)` → repositories inside `runInTransaction`
 6. Response `201 { appointment: AppointmentView }`
 7. Any thrown error → `errorHandler` → `{ error: { code, message, details? } }` (see `i18n_and_errors.md`)
 
-Auth: JWT signed with `JWT_SECRET`, `sub` = user id, payload `{ role }`, expiry `JWT_EXPIRES_IN` (default `8h`). Client stores it in `localStorage` key `medischedule.token`; any 401 on a request that carried a token logs the user out (`setUnauthorizedHandler`). No refresh tokens.
+Auth: JWT signed with `JWT_SECRET`, `sub` = user id, payload `{ role }`, expiry `JWT_EXPIRES_IN` (default `8h`). The client stores it in `localStorage` key `medischedule.token`. A 401 or `ACCOUNT_DISABLED` on a request that carried a token logs the user out (`setUnauthorizedHandler`). No refresh tokens. The per-request account check costs one indexed DB read per request, which is acceptable for this app and means deactivation takes effect immediately.
 
 ## API style
 
@@ -115,28 +127,34 @@ Auth: JWT signed with `JWT_SECRET`, `sub` = user id, payload `{ role }`, expiry 
 
 ### Endpoints
 
-| Method & path                                                                                                                                                                  | Roles                            | Status            |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- | ----------------- |
-| `GET /api/health` → `{ status, now, fakeClock }`                                                                                                                               | public                           | implemented       |
-| `POST /api/auth/register` (patients only)                                                                                                                                      | public                           | implemented       |
-| `POST /api/auth/login` (`identifier` = email or phone)                                                                                                                         | public                           | implemented       |
-| `GET /api/auth/me`                                                                                                                                                             | any logged-in                    | implemented       |
-| `GET /api/specialties`                                                                                                                                                         | any logged-in                    | implemented       |
-| `GET /api/specialties/:id/doctors`                                                                                                                                             | any logged-in                    | implemented       |
-| `GET /api/shifts`                                                                                                                                                              | any logged-in                    | implemented       |
-| `GET /api/availability?specialtyId&doctorId?`                                                                                                                                  | any logged-in                    | implemented       |
-| `POST /api/appointments`                                                                                                                                                       | PATIENT                          | implemented       |
-| `GET /api/appointments/mine`                                                                                                                                                   | PATIENT                          | implemented       |
-| `GET /api/appointments?date&shiftId&specialtyId&doctorId&status&q` → `{ appointments, counts }` (`date` or `q` required; `q` = part of code or phone, all dates; max 200 rows) | RECEPTIONIST, ADMIN              | implemented       |
-| `POST /api/appointments/:id/cancel` (body `{ reason? }` optional)                                                                                                              | PATIENT, RECEPTIONIST, ADMIN     | implemented       |
-| `POST /api/appointments/:id/check-in`                                                                                                                                          | RECEPTIONIST                     | implemented       |
-| `POST /api/appointments/:id/no-show`                                                                                                                                           | RECEPTIONIST, DOCTOR (own queue) | implemented       |
-| `POST /api/appointments/:id/notes` (body `{ content }`, 1–1000 chars) → 201                                                                                                    | RECEPTIONIST, DOCTOR (own queue) | implemented       |
-| `POST /api/appointments/:id/start`, `/complete`                                                                                                                                | DOCTOR (own queue)               | implemented       |
-| `GET /api/doctor/schedule` → `{ shifts: DutyShift[] }` (today … today+13, per-status counts)                                                                                   | DOCTOR                           | implemented       |
-| `GET /api/roster-entries/:id/queue` → `{ entry, appointments, nextAppointmentId, inExaminationElsewhere }`                                                                     | DOCTOR (own entry; else 404)     | implemented       |
-| `POST /api/roster-entries/:id/call-next` → `{ appointment }`                                                                                                                   | DOCTOR (own entry; else 404)     | implemented       |
-| Admin CRUD (specialties, rooms, doctors, receptionists, shifts, roster)                                                                                                        | ADMIN                            | planned (Phase 5) |
+| Method & path                                                                                                                                                                  | Roles                            | Status      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- | ----------- |
+| `GET /api/health` → `{ status, now, fakeClock }`                                                                                                                               | public                           | implemented |
+| `POST /api/auth/register` (patients only)                                                                                                                                      | public                           | implemented |
+| `POST /api/auth/login` (`identifier` = email or phone)                                                                                                                         | public                           | implemented |
+| `GET /api/auth/me`                                                                                                                                                             | any logged-in                    | implemented |
+| `GET /api/specialties`                                                                                                                                                         | any logged-in                    | implemented |
+| `GET /api/specialties/:id/doctors`                                                                                                                                             | any logged-in                    | implemented |
+| `GET /api/shifts`                                                                                                                                                              | any logged-in                    | implemented |
+| `GET /api/availability?specialtyId&doctorId?`                                                                                                                                  | any logged-in                    | implemented |
+| `POST /api/appointments`                                                                                                                                                       | PATIENT                          | implemented |
+| `GET /api/appointments/mine`                                                                                                                                                   | PATIENT                          | implemented |
+| `GET /api/appointments?date&shiftId&specialtyId&doctorId&status&q` → `{ appointments, counts }` (`date` or `q` required; `q` = part of code or phone, all dates; max 200 rows) | RECEPTIONIST, ADMIN              | implemented |
+| `POST /api/appointments/:id/cancel` (body `{ reason? }` optional)                                                                                                              | PATIENT, RECEPTIONIST, ADMIN     | implemented |
+| `POST /api/appointments/:id/check-in`                                                                                                                                          | RECEPTIONIST                     | implemented |
+| `POST /api/appointments/:id/no-show`                                                                                                                                           | RECEPTIONIST, DOCTOR (own queue) | implemented |
+| `POST /api/appointments/:id/notes` (body `{ content }`, 1–1000 chars) → 201                                                                                                    | RECEPTIONIST, DOCTOR (own queue) | implemented |
+| `POST /api/appointments/:id/start`, `/complete`                                                                                                                                | DOCTOR (own queue)               | implemented |
+| `GET /api/doctor/schedule` → `{ shifts: DutyShift[] }` (today … today+13, per-status counts)                                                                                   | DOCTOR                           | implemented |
+| `GET /api/roster-entries/:id/queue` → `{ entry, appointments, nextAppointmentId, inExaminationElsewhere }`                                                                     | DOCTOR (own entry; else 404)     | implemented |
+| `POST /api/roster-entries/:id/call-next` → `{ appointment }`                                                                                                                   | DOCTOR (own entry; else 404)     | implemented |
+| `GET/POST /api/admin/specialties`, `PATCH /api/admin/specialties/:id`, `POST …/:id/activate`, `…/:id/deactivate`                                                               | ADMIN                            | implemented |
+| Same pattern for `/api/admin/rooms`, `/api/admin/doctors` (id = Doctor.id; POST creates the user too), `/api/admin/receptionists` (id = User.id)                               | ADMIN                            | implemented |
+| `PATCH /api/admin/shifts/:id` `{ startTime, endTime }`                                                                                                                         | ADMIN                            | implemented |
+| `GET /api/admin/roster?weekStart=<Monday>` → `{ weekStart, weekEnd, days, shifts, rooms, doctors, entries }`                                                                   | ADMIN                            | implemented |
+| `POST /api/admin/roster-entries`, `PATCH /api/admin/roster-entries/:id` `{ roomId?, maxPatients? }`, `DELETE /api/admin/roster-entries/:id` → 204                              | ADMIN                            | implemented |
+| `POST /api/admin/roster/copy-previous-week` `{ weekStart }` → `{ sourceWeekStart, created, skipped }`                                                                          | ADMIN                            | implemented |
+| All appointments (UC-A8): reuses `GET /api/appointments` (already RECEPTIONIST, ADMIN)                                                                                         | ADMIN                            | implemented |
 
 ## Testing
 
@@ -145,4 +163,6 @@ Auth: JWT signed with `JWT_SECRET`, `sub` = user id, payload `{ role }`, expiry 
 - Each test file calls `resetDatabase()` in `beforeEach` and builds data with `helpers/fixtures.ts` (`createClinic`, `createPatient`, `createStaff`, `addRoster`, `bearer(user)`).
 - Service-level tests use fixed clocks (`new BookingService(..., () => new Date(2026, 9, 20, 9, 0))`, `new AppointmentService(appointmentRepository, noteRepository, clock)`); API tests use the real clock with dates relative to `today()`.
 - Guards are tested as pure functions in `appointmentRules.test.ts`; reception flows in `reception.service.test.ts` (fixed clocks) and `reception.api.test.ts` (HTTP); doctor flows in `queue.service.test.ts` (fixed clocks, incl. concurrent "call next") and `doctor.api.test.ts` (HTTP).
+- Admin: roster rules as pure functions in `rosterRules.test.ts`; `RosterService` with a fixed clock in `roster.service.test.ts` (conflicts, capacity, delete, copy-week skips); HTTP CRUD, deactivation guards, shift times and roster endpoints in `admin.api.test.ts`.
+- The `adminRouter` is mounted at `/api/admin` and uses `router.use(authenticate, requireRole(ADMIN))`. That's fine because only `/api/admin/*` paths reach it.
 - The `queueRouter` is mounted at `/api` with middleware **per route** (not `router.use`), so unknown `/api` paths still reach the 404 handler; `doctor.api.test.ts` checks this.

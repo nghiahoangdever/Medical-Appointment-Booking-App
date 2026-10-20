@@ -54,17 +54,36 @@ A Prisma `P2002` (unique violation) that slips past service checks is mapped to 
 
 ## Soft delete (`isActive`)
 
-Nothing is hard-deleted by the app. Current behaviour:
+Specialties, rooms and user accounts are never deleted; admins deactivate and reactivate them through `POST /api/admin/<specialties|rooms|doctors|receptionists>/:id/(deactivate|activate)` (Phase 5). The only hard delete is a roster entry that was never booked (see `booking_and_queue.md`). Behaviour:
 
-- `User.isActive = false` → login returns `403 ACCOUNT_DISABLED`; `GET /api/auth/me` returns `401 INVALID_TOKEN`. Existing JWTs still pass `authenticate` until they expire (it does not hit the DB).
-- Doctors are "active" when their `user.isActive` is true: inactive doctors are excluded from doctor lists, availability and booking candidates.
-- `Specialty.isActive = false` → hidden from `GET /api/specialties`; `GET /api/specialties/:id/doctors` and availability return `404 SPECIALTY_NOT_FOUND`. `BookingService` does not check the specialty flag itself (it relies on roster candidates).
-- `Room.isActive` exists but **no query checks it yet**.
-- Admin deactivate/reactivate endpoints and UI: **planned (Phase 5)**.
+- **Deactivation guard:** a specialty, room or doctor can't be deactivated while it has appointments from today on that are still open (BOOKED / CHECKED_IN / IN_EXAMINATION). The error is 409 `HAS_UPCOMING_APPOINTMENTS` (`AppointmentRepository.countUpcomingOpen`). Receptionists can always be deactivated.
+- `User.isActive = false`:
+  - login returns `403 ACCOUNT_DISABLED`;
+  - **every authenticated request** returns `403 ACCOUNT_DISABLED`, including `/api/auth/me` with a still-valid token. `authenticate` re-reads the account each time via `AuthService.getCurrentUser`, and the client then logs the user out;
+  - reactivating the account makes the same token work again (until it expires);
+  - a deleted account gets `401 INVALID_TOKEN`;
+  - the role used for authorization comes from the database, not the token.
+- Inactive doctors are excluded from:
+  - doctor lists;
+  - availability and booking (`findSlots`);
+  - the roster editor's doctor picker, and new roster entries are refused (`DOCTOR_INACTIVE`).
+- `Specialty.isActive = false`:
+  - hidden from `GET /api/specialties`, and `/:id/doctors` and availability return `404 SPECIALTY_NOT_FOUND`;
+  - its roster entries take no new bookings (`findSlots` filters `specialty.isActive`);
+  - no new doctors can be added to it (`SPECIALTY_INACTIVE`).
+- `Room.isActive = false`:
+  - can't be used for new or moved roster entries (`ROOM_INACTIVE`);
+  - its entries take no new bookings (`findSlots` filters `room.isActive`);
+  - shown in the roster grid only for weeks where it still has entries.
+- A doctor's specialty is **fixed after creation**, because appointments reach their specialty through `rosterEntry → doctor → specialty`, so changing it would rewrite history. Admins can change name, contact details, title, bio and password.
+
+### Known limitations (confirmed)
+
+- **Reassigning a booked shift to another doctor is not supported.** A roster entry's doctor, date and shift are fixed, and an entry with any appointment (cancelled ones included) can't be deleted. If a doctor becomes unavailable for a booked shift, staff can only cancel the affected appointments (reception/admin cancel) and lower `maxPatients`. There is no "move these patients to doctor X" operation.
 
 ## Demo seed (`server/prisma/seed.ts`)
 
-Wipes every table (children first) and resets ids, then creates: 1 admin, 2 receptionists, 3 specialties × 2 doctors, 6 rooms (each doctor keeps one room), 2 shifts, roster entries for the current and next week (Mon–Sat; mornings maxPatients 10, afternoons 6), 3 patients, and 2 BOOKED appointments in doctor 1's next morning shift after today (queue 1 and 2, `nextQueueNumber` set to 3). All passwords: `password123`.
+Wipes every table (children first) and resets ids, then creates: 1 admin, 2 receptionists, 3 specialties × 2 doctors, 8 rooms (A1-01…B2-03, one per doctor; B2-04 free; C3-01 inactive "đang sửa chữa"), 2 shifts, roster entries for the current and next week (Mon–Sat; mornings maxPatients 10, afternoons 6), 3 patients, and 2 BOOKED appointments in doctor 1's next morning shift after today (queue 1 and 2, `nextQueueNumber` set to 3). All passwords: `password123`.
 
 ## Dev scenario seed (`server/prisma/seed-today.ts`, `npm run db:seed:today -w server`)
 
