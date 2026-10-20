@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { specialtiesApi } from '../../../api/booking';
-import { Alert } from '../../../components/ui/Alert';
+import { EmptyState } from '../../../components/EmptyState';
+import { LoadError } from '../../../components/LoadError';
 import { PageSpinner } from '../../../components/ui/PageSpinner';
 import { useApi } from '../../../hooks/useApi';
-import { errorMessage } from '../../../i18n/errors';
 import { doctorName } from '../../../i18n/labels';
 import type { Doctor, Specialty } from '../../../types';
 import { ChoiceCard } from './ChoiceCard';
@@ -21,10 +21,21 @@ export function StepDoctor({ specialty, selected, onSelect }: StepDoctorProps) {
     () => specialtiesApi.doctors(specialty.id).then((r) => r.doctors),
     [specialty.id],
   );
-  const { data, error } = useApi(load);
+  const { data, error, refresh } = useApi(load);
 
-  if (error) return <Alert>{errorMessage(error)}</Alert>;
+  if (error) return <LoadError error={error} onRetry={() => void refresh()} />;
   if (!data) return <PageSpinner />;
+
+  if (data.length === 0) {
+    return (
+      <section>
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">Chọn bác sĩ</h2>
+        <EmptyState
+          message={`Chuyên khoa ${specialty.name} hiện chưa có bác sĩ nhận lịch. Vui lòng chọn chuyên khoa khác.`}
+        />
+      </section>
+    );
+  }
 
   return (
     <section>
@@ -32,7 +43,7 @@ export function StepDoctor({ specialty, selected, onSelect }: StepDoctorProps) {
       <p className="mb-3 text-sm text-slate-500">
         Không bắt buộc — bạn có thể để hệ thống tự phân công bác sĩ.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3">
         <ChoiceCard selected={selected === null} onClick={() => onSelect(null)}>
           <p className="font-medium text-slate-900">Bất kỳ bác sĩ nào</p>
           <p className="mt-1 text-sm text-slate-500">

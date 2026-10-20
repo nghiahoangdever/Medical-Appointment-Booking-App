@@ -6,7 +6,7 @@ import { ROLE_HOME } from '../../auth/roles';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { TextField } from '../../components/ui/FormField';
-import { errorMessage, fieldErrorMessages } from '../../i18n/errors';
+import { errorMessage, fieldErrorMessages, translateError } from '../../i18n/errors';
 import { ROLE_LABEL } from '../../i18n/labels';
 import type { Role } from '../../types';
 import { AuthCard } from './AuthCard';
@@ -20,7 +20,7 @@ const DEMO_ACCOUNTS: [Role, string][] = [
 ];
 
 export function LoginPage() {
-  const { user, login } = useAuth();
+  const { user, login, sessionEndedReason } = useAuth();
   const navigate = useNavigate();
   const from = (useLocation().state as { from?: string } | null)?.from;
 
@@ -60,6 +60,10 @@ export function LoginPage() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        {/* Why the previous session ended (expired / deactivated), until the next attempt. */}
+        {sessionEndedReason && !error && (
+          <Alert tone="info">{translateError(sessionEndedReason)}</Alert>
+        )}
         {error && <Alert>{error}</Alert>}
         <TextField
           label="Email hoặc số điện thoại"

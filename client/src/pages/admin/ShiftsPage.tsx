@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { adminApi } from '../../api/admin';
 import { shiftsApi } from '../../api/booking';
+import { LoadError } from '../../components/LoadError';
 import { PageHeader } from '../../components/PageHeader';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
@@ -30,7 +31,7 @@ export function ShiftsPage() {
           được chồng giờ lên nhau.
         </Alert>
       </div>
-      {error !== null && !data && <Alert>{errorMessage(error)}</Alert>}
+      {error !== null && !data && <LoadError error={error} onRetry={() => void refresh()} />}
       {!data ? (
         !error && <PageSpinner />
       ) : (

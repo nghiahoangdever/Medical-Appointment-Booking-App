@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { adminApi } from '../../api/admin';
+import { LoadError } from '../../components/LoadError';
 import { PageHeader } from '../../components/PageHeader';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
@@ -10,7 +11,7 @@ import { useApi } from '../../hooks/useApi';
 import { useSubmit } from '../../hooks/useSubmit';
 import { errorMessage, fieldErrorMessages } from '../../i18n/errors';
 import type { AdminSpecialty } from '../../types';
-import { ActiveBadge, ListWithForm, RowAction, Td, Th } from './shared';
+import { ActiveBadge, EmptyRow, ListWithForm, RowAction, Td, Th } from './shared';
 
 const EMPTY = { name: '', description: '' };
 
@@ -67,7 +68,7 @@ export function SpecialtiesPage() {
           <Alert>{errorMessage(toggle.error)}</Alert>
         </div>
       )}
-      {error !== null && !data && <Alert>{errorMessage(error)}</Alert>}
+      {error !== null && !data && <LoadError error={error} onRetry={() => void refresh()} />}
       {!data ? (
         !error && <PageSpinner />
       ) : (
@@ -84,6 +85,12 @@ export function SpecialtiesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                {data.length === 0 && (
+                  <EmptyRow
+                    colSpan={5}
+                    message="Chưa có chuyên khoa nào. Thêm chuyên khoa ở biểu mẫu bên phải."
+                  />
+                )}
                 {data.map((s) => (
                   <tr key={s.id} className={editing?.id === s.id ? 'bg-teal-50/50' : undefined}>
                     <Td className="font-medium">{s.name}</Td>

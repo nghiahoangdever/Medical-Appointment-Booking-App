@@ -1,0 +1,148 @@
+@startuml class-domain
+' MediSchedule: domain (entity) class diagram. Mirrors server/prisma/schema.prisma and
+' server/src/domain/enums.ts. Dates are "YYYY-MM-DD" strings, times "HH:mm" strings.
+
+title MediSchedule: Domain model
+hide empty methods
+skinparam classAttributeIconSize 0
+
+enum Role {
+  PATIENT
+  RECEPTIONIST
+  DOCTOR
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum AppointmentStatus {
+  BOOKED
+  CHECKED_IN
+  IN_EXAMINATION
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+class User {
+  id: Int {PK}
+  fullName: String
+  email: String {unique}
+  phone: String {unique}
+  passwordHash: String
+  role: Role
+  isActive: Boolean = true
+  createdAt: DateTime
+}
+
+class PatientProfile {
+  userId: Int {PK, FK}
+  dateOfBirth: Date
+  gender: Gender
+  address: String [0..1]
+}
+
+class Doctor {
+  id: Int {PK}
+  userId: Int {FK, unique}
+  specialtyId: Int {FK}
+  title: String
+  bio: String [0..1]
+}
+
+class Specialty {
+  id: Int {PK}
+  name: String {unique}
+  description: String [0..1]
+  isActive: Boolean = true
+}
+
+class Room {
+  id: Int {PK}
+  code: String {unique}
+  name: String
+  floor: String [0..1]
+  isActive: Boolean = true
+}
+
+class Shift {
+  id: Int {PK}
+  name: String {unique}
+  startTime: Time
+  endTime: Time
+}
+
+class RosterEntry {
+  id: Int {PK}
+  doctorId: Int {FK}
+  roomId: Int {FK}
+  shiftId: Int {FK}
+  date: Date
+  maxPatients: Int
+  nextQueueNumber: Int = 1
+}
+
+class Appointment {
+  id: Int {PK}
+  code: String {unique}
+  patientId: Int {FK}
+  rosterEntryId: Int {FK}
+  queueNumber: Int
+  status: AppointmentStatus
+  reason: String [0..1]
+  bookedAt: DateTime
+  checkedInAt: DateTime [0..1]
+  startedAt: DateTime [0..1]
+  completedAt: DateTime [0..1]
+  cancelledAt: DateTime [0..1]
+  cancelledById: Int [0..1] {FK}
+  cancelReason: String [0..1]
+}
+
+class AppointmentNote {
+  id: Int {PK}
+  appointmentId: Int {FK}
+  authorId: Int {FK}
+  content: String
+  createdAt: DateTime
+}
+
+User "1" *-- "0..1" PatientProfile : has >
+User "1" *-- "0..1" Doctor : has >
+Specialty "1" -- "*" Doctor : employs >
+Doctor "1" -- "*" RosterEntry : on duty >
+Room "1" -- "*" RosterEntry : hosts >
+Shift "1" -- "*" RosterEntry : time of >
+RosterEntry "1" *-- "*" Appointment : contains >
+User "1" -- "*" Appointment : books (patient) >
+User "0..1" -- "*" Appointment : cancelled by <
+Appointment "1" *-- "*" AppointmentNote : has >
+User "1" -- "*" AppointmentNote : writes (staff) >
+
+User ..> Role
+PatientProfile ..> Gender
+Appointment ..> AppointmentStatus
+
+note bottom of RosterEntry
+  unique (doctorId, date, shiftId): a doctor is in one place per shift
+  unique (roomId, date, shiftId): a room hosts one doctor per shift
+  capacity used = appointments whose status is not CANCELLED
+  doctor, date and shift are fixed after creation (room and maxPatients can change)
+end note
+
+note bottom of Appointment
+  unique (rosterEntryId, queueNumber); queue numbers are never reused
+  specialty, doctor, room, date and shift come from its RosterEntry
+  status changes only through the state machine (see 04-state-appointment)
+end note
+
+note right of Specialty
+  Specialty, Room and User are deactivated
+  (isActive = false), never deleted.
+end note
+
+@enduml

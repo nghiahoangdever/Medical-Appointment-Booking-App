@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { availabilityApi } from '../../../api/booking';
+import { LoadError } from '../../../components/LoadError';
 import { RefreshButton } from '../../../components/RefreshButton';
 import { Alert } from '../../../components/ui/Alert';
 import { PageSpinner } from '../../../components/ui/PageSpinner';
 import { useApi } from '../../../hooks/useApi';
-import { errorMessage } from '../../../i18n/errors';
 import { shiftLabel } from '../../../i18n/labels';
 import { formatDateLong, formatDayMonth, weekdayShort } from '../../../lib/date';
 import type { DayAvailability, Doctor, ShiftAvailability, Specialty } from '../../../types';
@@ -42,12 +42,13 @@ export function StepSchedule({
   );
   const { data, error, loading, refresh } = useApi(load);
 
-  if (error && !data) return <Alert>{errorMessage(error)}</Alert>;
+  if (error && !data) return <LoadError error={error} onRetry={() => void refresh()} />;
   if (!data) return <PageSpinner />;
 
   // Default to the first day that still has room.
   const activeDate = selectedDate ?? data.days.find(hasOpenShift)?.date ?? null;
   const activeDay = data.days.find((d) => d.date === activeDate);
+  const nothingOpen = !data.days.some(hasOpenShift);
 
   return (
     <section className="space-y-6">
@@ -56,7 +57,16 @@ export function StepSchedule({
           <h2 className="text-lg font-semibold text-slate-900">Chọn ngày khám</h2>
           <RefreshButton onClick={() => void refresh()} loading={loading} />
         </div>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-7">
+        {nothingOpen && (
+          <div className="mb-3">
+            <Alert tone="info">
+              {doctor
+                ? 'Bác sĩ này không còn ca nào nhận đặt lịch trong 14 ngày tới. Hãy thử "Bất kỳ bác sĩ nào" hoặc chuyên khoa khác.'
+                : 'Chuyên khoa này không còn ca nào nhận đặt lịch trong 14 ngày tới. Vui lòng quay lại sau.'}
+            </Alert>
+          </div>
+        )}
+        <div className="grid grid-cols-7 gap-2">
           {data.days.map((day) => (
             <DayButton
               key={day.date}

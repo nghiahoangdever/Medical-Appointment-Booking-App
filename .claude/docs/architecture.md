@@ -95,12 +95,15 @@ client/
                              StaffActions (buttons for every staff action in allowedActions: check-in, start, complete,
                              no-show + CancelAppointment), CancelAppointment (shared patient/staff), PatientInfo,
                              AppointmentNotes, StatusBadge, RefreshButton, EmptyState, PageHeader, Logo,
+                             ErrorBoundary (per page, keyed by path; Vietnamese fallback), LoadError (failed
+                             load + "Thử lại" → useApi refresh),
                              ui/ (Button — defaults to type="button", FormField: TextField/SelectField/TextAreaField, Alert, PageSpinner)
     pages/                   auth/ (Login, Register), patient/ (MyAppointmentsPage, booking/ wizard),
                              reception/ (ReceptionPage, DayNavigator, StatusFilter),
                              doctor/ (DoctorSchedulePage, DoctorQueuePage),
                              admin/ (roster/ RosterPage + RosterGrid + RosterEntryPanel, SpecialtiesPage, RoomsPage,
-                             DoctorsPage, ReceptionistsPage, ShiftsPage, AdminAppointmentsPage, shared.tsx),
+                             DoctorsPage, ReceptionistsPage, ShiftsPage, AdminAppointmentsPage, shared.tsx
+                             (incl. EmptyRow for empty tables)),
                              NotFoundPage. (RoleHome placeholder removed: every role has real pages.)
     types/index.ts           API response shapes (hand-mirrored from server views)
 ```
@@ -117,7 +120,7 @@ New server feature = new or extended folder under `modules/` with the same four-
 6. Response `201 { appointment: AppointmentView }`
 7. Any thrown error → `errorHandler` → `{ error: { code, message, details? } }` (see `i18n_and_errors.md`)
 
-Auth: JWT signed with `JWT_SECRET`, `sub` = user id, payload `{ role }`, expiry `JWT_EXPIRES_IN` (default `8h`). The client stores it in `localStorage` key `medischedule.token`. A 401 or `ACCOUNT_DISABLED` on a request that carried a token logs the user out (`setUnauthorizedHandler`). No refresh tokens. The per-request account check costs one indexed DB read per request, which is acceptable for this app and means deactivation takes effect immediately.
+Auth: JWT signed with `JWT_SECRET`, `sub` = user id, payload `{ role }`, expiry `JWT_EXPIRES_IN` (default `8h`). The client stores it in `localStorage` key `medischedule.token`. A 401 or `ACCOUNT_DISABLED` on a request that carried a token logs the user out (`setUnauthorizedHandler(code)`); `AuthContext.sessionEndedReason` keeps the code so the login page can say why (session expired / account disabled). No refresh tokens. The per-request account check costs one indexed DB read per request, which is acceptable for this app and means deactivation takes effect immediately.
 
 ## API style
 
@@ -163,6 +166,7 @@ Auth: JWT signed with `JWT_SECRET`, `sub` = user id, payload `{ role }`, expiry 
 - Each test file calls `resetDatabase()` in `beforeEach` and builds data with `helpers/fixtures.ts` (`createClinic`, `createPatient`, `createStaff`, `addRoster`, `bearer(user)`).
 - Service-level tests use fixed clocks (`new BookingService(..., () => new Date(2026, 9, 20, 9, 0))`, `new AppointmentService(appointmentRepository, noteRepository, clock)`); API tests use the real clock with dates relative to `today()`.
 - Guards are tested as pure functions in `appointmentRules.test.ts`; reception flows in `reception.service.test.ts` (fixed clocks) and `reception.api.test.ts` (HTTP); doctor flows in `queue.service.test.ts` (fixed clocks, incl. concurrent "call next") and `doctor.api.test.ts` (HTTP).
+- **End-to-end flow** (`e2e.flow.test.ts`): one clinic day through HTTP only, with real logins for all four roles: admin setup → registration and booking (duplicate, full shift, cancel gap) → capacity change → re-login after the 8 h tokens expire → check-in, search, notes, no-show → call next, `DOCTOR_BUSY`, complete → patient view without notes → delete blocked, copy week, overview counts → doctor deactivated mid-session (`ACCOUNT_DISABLED`). It fakes only `Date` (`vi.useFakeTimers({ toFake: ['Date'] })` + `vi.setSystemTime`), so the services' system clock and JWT expiry follow the fixed time while real timers keep supertest and Prisma working. Its steps share state and run in order.
 - Admin: roster rules as pure functions in `rosterRules.test.ts`; `RosterService` with a fixed clock in `roster.service.test.ts` (conflicts, capacity, delete, copy-week skips); HTTP CRUD, deactivation guards, shift times and roster endpoints in `admin.api.test.ts`.
 - The `adminRouter` is mounted at `/api/admin` and uses `router.use(authenticate, requireRole(ADMIN))`. That's fine because only `/api/admin/*` paths reach it.
 - The `queueRouter` is mounted at `/api` with middleware **per route** (not `router.use`), so unknown `/api` paths still reach the 404 handler; `doctor.api.test.ts` checks this.

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { adminApi } from '../../../api/admin';
+import { LoadError } from '../../../components/LoadError';
 import { PageHeader } from '../../../components/PageHeader';
 import { RefreshButton } from '../../../components/RefreshButton';
 import { Alert } from '../../../components/ui/Alert';
@@ -128,12 +129,20 @@ export function RosterPage() {
       {copyResult && week && <CopySummary result={copyResult} week={week} />}
       {error !== null && (
         <div className="mb-4">
-          <Alert>{errorMessage(error)}</Alert>
+          <LoadError error={error} onRetry={() => void refresh()} />
+        </div>
+      )}
+      {week && week.entries.length === 0 && !copyResult && (
+        <div className="mb-4">
+          <Alert tone="info">
+            Tuần này chưa có ca trực nào. Chọn một ô trống để thêm bác sĩ trực, hoặc dùng “Sao chép
+            tuần trước”.
+          </Alert>
         </div>
       )}
 
       {!week ? (
-        <PageSpinner />
+        error === null && <PageSpinner />
       ) : (
         <div className="space-y-4">
           <RosterGrid week={week} selected={selected} onSelect={setSelected} />

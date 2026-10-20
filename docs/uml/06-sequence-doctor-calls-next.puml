@@ -1,0 +1,85 @@
+@startuml sequence-doctor-calls-next
+' MediSchedule: UC-D3 "Doctor calls the next patient" (includes UC-D4 start).
+' Names match the code and .claude/docs/design_mapping.md.
+
+title Sequence: Doctor calls the next patient
+autonumber
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+
+actor Doctor
+participant "DoctorQueuePage" as UI
+participant "doctorApi\n(api/http.ts)" as Api
+participant "authenticate +\nrequireRole(DOCTOR)" as Auth
+participant "QueueController" as Ctrl
+participant "QueueService" as Queue
+participant "AppointmentService" as ApptSvc
+participant "AppointmentStateMachine\n(domain)" as SM
+participant "AppointmentRules\n(domain)" as Rules
+participant "RosterRepository" as RosterRepo
+participant "AppointmentRepository" as ApptRepo
+database "SQLite" as DB
+
+== Load the shift queue (UC-D2), repeated every 15 s ==
+Doctor -> UI : open a shift from "Lịch trực của tôi"
+UI -> Api : doctorApi.queue(rosterEntryId)
+Api -> Auth : GET /api/roster-entries/:id/queue
+note right : authenticate re-reads the account\n(AuthService.getCurrentUser → 401 / 403)
+Auth -> Ctrl : queueForEntry(req, res)
+Ctrl -> Queue : getQueue(doctor, rosterEntryId)
+Queue -> RosterRepo : findDutyEntry(id)
+alt not found or another doctor's entry
+  Queue --> UI : 404 ROSTER_ENTRY_NOT_FOUND
+end
+Queue -> ApptRepo : findByRosterEntry(id)
+Queue -> Queue : toStaffAppointmentView(a, doctor, now)\n(+ allowedActions via AppointmentRules)
+Queue -> ApptRepo : findDoctorInExamination(doctor.id, entry.date)
+Queue --> UI : 200 { entry, appointments, nextAppointmentId,\ninExaminationElsewhere }
+UI --> Doctor : groups: in examination / waiting / not arrived / done;\n"Gọi bệnh nhân tiếp theo" enabled only if nextAppointmentId ≠ null
+
+== Call next (UC-D3) ==
+Doctor -> UI : click "Gọi bệnh nhân tiếp theo"
+UI -> Api : doctorApi.callNext(rosterEntryId)
+Api -> Auth : POST /api/roster-entries/:id/call-next
+Auth -> Ctrl : callNext(req, res)
+Ctrl -> Queue : callNext(doctor, rosterEntryId)
+Queue -> RosterRepo : ownEntry → findDutyEntry(id)
+alt not found or another doctor's entry
+  Queue --> UI : 404 ROSTER_ENTRY_NOT_FOUND
+end
+Queue -> ApptRepo : findFirstCheckedIn(rosterEntryId)
+ApptRepo -> DB : status = CHECKED_IN\norder by queueNumber, first
+alt nobody checked in
+  Queue --> UI : 409 NO_PATIENT_WAITING
+end
+Queue -> ApptSvc : start(doctor, appointmentId)
+
+group perform(): runInTransaction
+  ApptSvc -> ApptRepo : findVisibleTo → findById(id, tx)\n(+ doctorInExamination: the doctor's open exams that day, all shifts)
+  ApptSvc -> SM : transition(CHECKED_IN, START, DOCTOR)
+  alt no such arrow / role not allowed
+    SM --> UI : 409 INVALID_STATUS_TRANSITION / 403 ACTION_NOT_ALLOWED_FOR_ROLE
+  end
+  SM --> ApptSvc : IN_EXAMINATION
+  ApptSvc -> Rules : guardFailure(facts, START, doctor, now)
+  alt guard fails
+    Rules --> UI : 409 NOT_YOUR_PATIENT / EXAM_NOT_TODAY / DOCTOR_BUSY
+  end
+  ApptSvc -> ApptRepo : updateStatus(id, CHECKED_IN,\n{ status: IN_EXAMINATION, startedAt: now }, tx)
+  ApptRepo -> DB : update … where id and status = CHECKED_IN
+  alt 0 rows updated (changed concurrently)
+    ApptSvc --> UI : 409 APPOINTMENT_CHANGED
+  end
+end
+
+ApptSvc -> ApptSvc : toViewFor(appointment, doctor, now)
+ApptSvc --> Ctrl : StaffAppointmentView
+Ctrl --> UI : 200 { appointment }
+UI --> Doctor : "Đang khám: <name> (STT n)"; queue refreshes,\ncurrent patient's card expanded (details, notes)
+
+== Afterwards ==
+Doctor -> UI : add note, then "Hoàn thành khám"
+UI -> Api : POST /api/appointments/:id/notes, then /complete
+note right : AppointmentService.addNote / .complete\n(IN_EXAMINATION → COMPLETED, same perform() pattern)
+
+@enduml

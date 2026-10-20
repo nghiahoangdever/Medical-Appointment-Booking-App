@@ -1,7 +1,7 @@
 # Booking, availability and queue
 
 Code: `server/src/domain/booking.ts` (pure rules), `server/src/modules/appointments/booking.service.ts`, `server/src/modules/availability/availability.service.ts`, `server/src/modules/roster/roster.repository.ts`.
-Tests: `server/tests/booking.domain.test.ts`, `booking.service.test.ts`, `appointments.api.test.ts`.
+Tests: `server/tests/booking.domain.test.ts`, `booking.service.test.ts`, `appointments.api.test.ts`; the whole flow (book → cancel → check in → call next → complete) in `e2e.flow.test.ts`.
 
 ## Pure rules (`domain/booking.ts`)
 
@@ -43,7 +43,7 @@ Validation (controller, zod): `specialtyId`, `shiftId`, `doctorId?` → `id()` (
 - Per roster entry, sequential from 1, assigned **at booking** from `RosterEntry.nextQueueNumber`.
 - **Never reused**: cancelling #2 leaves a gap; the next booking gets #3. Consequently a queue number can exceed `maxPatients`.
 - Never compute `MAX(queueNumber) + 1`; always use `takeNextQueueNumber` inside the booking transaction.
-- Call order for doctors (planned Phase 4): the CHECKED_IN appointment with the lowest `queueNumber`.
+- Call order for doctors: the CHECKED_IN appointment with the lowest `queueNumber` (see "Doctor queue" below).
 
 ## Availability (`GET /api/availability?specialtyId&doctorId?`)
 
@@ -73,7 +73,7 @@ Code: `server/src/modules/queue/queue.service.ts` (`QueueService`), `client/src/
 - **Duty schedule** (`GET /api/doctor/schedule`): the doctor's roster entries from today to today + 13, earliest first, each with `counts` per status and `maxPatients`. Only the doctor's own entries are listed.
 - **Queue** (`GET /api/roster-entries/:id/queue`): every appointment of the entry in `queueNumber` order, as staff views with the doctor's `allowedActions`, plus `nextAppointmentId`. Another doctor's entry returns 404 `ROSTER_ENTRY_NOT_FOUND`.
 - **Call order**: the lowest `queueNumber` with status CHECKED_IN, regardless of check-in time. Patients who haven't arrived (BOOKED) are skipped, so their number is not lost and they can still be called once checked in.
-- **Call next** (`POST /api/roster-entries/:id/call-next`): checks ownership (404), then `AppointmentRepository.findFirstCheckedIn` (none → 409 `NO_PATIENT_WAITING`), then `AppointmentService.start` on it. The state machine and guards apply, including `DOCTOR_BUSY` while another patient of that shift is IN_EXAMINATION and `EXAM_NOT_TODAY`.
+- **Call next** (`POST /api/roster-entries/:id/call-next`): checks ownership (404), then `AppointmentRepository.findFirstCheckedIn` (none → 409 `NO_PATIENT_WAITING`), then `AppointmentService.start` on it. The state machine and guards apply, including `DOCTOR_BUSY` while the doctor has another patient IN_EXAMINATION that day (any shift) and `EXAM_NOT_TODAY`.
 - **Out of order**: a doctor can start any waiting patient directly (`POST /api/appointments/:id/start`). The same guards apply.
 - **One at a time per doctor**: at most one IN_EXAMINATION per doctor per day, across all their shifts. A morning exam left open blocks the afternoon queue. This is enforced in a transaction, and tests with concurrent requests (same shift and two different shifts) check it. The queue view adds `inExaminationElsewhere` (`{ appointmentId, rosterEntryId, queueNumber, patientName, shift }` or null) so the page can say where the open exam is and link to that queue.
 - No-shows and completed exams keep their place in capacity (`usesCapacity`), and queue numbers never change.

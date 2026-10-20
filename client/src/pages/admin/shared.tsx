@@ -41,6 +41,17 @@ export function Td({ children, className = '' }: { children?: ReactNode; classNa
   return <td className={`px-4 py-3 text-sm text-slate-800 ${className}`}>{children}</td>;
 }
 
+/** Single table row shown when a list has nothing to display yet. */
+export function EmptyRow({ colSpan, message }: { colSpan: number; message: string }) {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-4 py-10 text-center text-sm text-slate-500">
+        {message}
+      </td>
+    </tr>
+  );
+}
+
 /** Text-style button for row actions. */
 export function RowAction({
   onClick,

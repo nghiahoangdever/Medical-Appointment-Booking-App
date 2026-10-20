@@ -9,6 +9,12 @@ interface AuthContextValue {
   user: User | null;
   /** True while a stored token is being checked on page load. */
   initializing: boolean;
+  /**
+   * Error code explaining why the session ended on its own (INVALID_TOKEN when it expired,
+   * ACCOUNT_DISABLED when the account was deactivated), shown on the login page. Null after a
+   * normal logout or a new login.
+   */
+  sessionEndedReason: string | null;
   login: (identifier: string, password: string) => Promise<User>;
   register: (input: RegisterInput) => Promise<User>;
   logout: () => void;
@@ -19,10 +25,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(() => tokenStorage.get() !== null);
+  const [sessionEndedReason, setSessionEndedReason] = useState<string | null>(null);
 
   const logout = useCallback(() => {
     tokenStorage.clear();
     setUser(null);
+    setSessionEndedReason(null);
   }, []);
 
   // Restore the session from a stored token.
@@ -35,15 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setInitializing(false));
   }, []);
 
-  // Any 401 on an authenticated request means the session is over.
+  // A 401 or ACCOUNT_DISABLED on an authenticated request means the session is over.
   useEffect(() => {
-    setUnauthorizedHandler(logout);
+    setUnauthorizedHandler((code) => {
+      tokenStorage.clear();
+      setUser(null);
+      setSessionEndedReason(code);
+    });
     return () => setUnauthorizedHandler(null);
-  }, [logout]);
+  }, []);
 
   const startSession = useCallback((res: AuthResponse) => {
     tokenStorage.set(res.token);
     setUser(res.user);
+    setSessionEndedReason(null);
     return res.user;
   }, []);
 
@@ -59,8 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ user, initializing, login, register, logout }),
-    [user, initializing, login, register, logout],
+    () => ({ user, initializing, sessionEndedReason, login, register, logout }),
+    [user, initializing, sessionEndedReason, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

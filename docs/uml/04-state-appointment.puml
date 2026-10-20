@@ -1,0 +1,43 @@
+@startuml state-appointment
+' MediSchedule: Appointment state diagram.
+' Arrows = rows of TRANSITIONS (server/src/domain/appointmentStateMachine.ts).
+' [guards] = cases of guardFailure (server/src/domain/appointmentRules.ts).
+' Every arrow is one action endpoint: POST /api/appointments/:id/<action>.
+
+title Appointment: states and transitions
+
+[*] --> BOOKED : book (Patient)\n[date in today..today+13 ∧ shift not started\n∧ no other active booking in date+shift\n∧ an on-duty roster entry has capacity]\n/ queueNumber = nextQueueNumber++
+
+state BOOKED
+state CHECKED_IN
+state IN_EXAMINATION
+state COMPLETED
+state CANCELLED
+state NO_SHOW
+
+BOOKED --> CANCELLED : cancel (Patient)\n[own appointment ∧ before shift start]\n/ cancelledAt, cancelledById
+BOOKED --> CANCELLED : cancel (Receptionist, Admin)\n/ cancelledAt, cancelledById, cancelReason
+BOOKED --> CHECKED_IN : checkIn (Receptionist)\n[date = today ∧ before shift end]\n/ checkedInAt
+BOOKED --> NO_SHOW : markNoShow (Receptionist, Doctor)\n[after shift start ∧ (Doctor: own queue)]
+CHECKED_IN --> IN_EXAMINATION : start / callNext (Doctor)\n[own queue ∧ date = today\n∧ no other patient IN_EXAMINATION\nfor this doctor today (any shift)]\n/ startedAt
+CHECKED_IN --> NO_SHOW : markNoShow (Doctor)\n[own queue ∧ after shift start]
+IN_EXAMINATION --> COMPLETED : complete (Doctor)\n[own queue]\n/ completedAt
+
+COMPLETED --> [*]
+CANCELLED --> [*]
+NO_SHOW --> [*]
+
+note right of CANCELLED
+  CANCELLED frees the place (capacity counts every
+  other status) but its queue number is never reused.
+end note
+
+note bottom of IN_EXAMINATION
+  No arrow IN_EXAMINATION -> NO_SHOW: once the exam has
+  started the patient was there. Final states have no exits.
+  Wrong status -> 409 INVALID_STATUS_TRANSITION;
+  wrong role -> 403 ACTION_NOT_ALLOWED_FOR_ROLE;
+  failed guard -> 409 with the guard's code.
+end note
+
+@enduml

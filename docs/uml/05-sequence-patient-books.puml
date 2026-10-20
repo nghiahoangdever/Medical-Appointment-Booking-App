@@ -1,0 +1,106 @@
+@startuml sequence-patient-books
+' MediSchedule: UC-P4 "Patient books an appointment" (includes UC-P3).
+' Names match the code. Labels 6.1–6.8 are the steps in .claude/docs/design_mapping.md
+' (numbered 1–8 in the comments of booking.service.ts). authenticate/requireRole run before
+' every API call; they are drawn in full only for the booking request.
+
+title Sequence: Patient books an appointment
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+
+actor Patient
+participant "BookAppointmentPage\n(StepSpecialty / StepDoctor /\nStepSchedule / StepConfirm)" as UI
+participant "appointmentsApi /\navailabilityApi\n(api/http.ts)" as Api
+participant "authenticate" as Auth
+participant "AuthService" as AuthSvc
+participant "requireRole(PATIENT)" as Role
+participant "SpecialtyController /\nAvailabilityController" as RefCtrl
+participant "AppointmentController" as Ctrl
+participant "BookingService" as Svc
+participant "ShiftRepository" as ShiftRepo
+participant "AppointmentRepository" as ApptRepo
+participant "RosterRepository" as RosterRepo
+database "SQLite" as DB
+
+Patient -> UI : choose specialty, doctor (optional)
+UI -> Api : specialtiesApi.list() / .doctors(id)
+Api -> RefCtrl : GET /api/specialties, /api/specialties/:id/doctors
+note right : SpecialtyService.list / .listDoctors\n(drawn as one step)
+RefCtrl --> UI : { specialties } / { doctors }
+
+UI -> Api : availabilityApi.get(specialtyId, doctorId?)
+Api -> RefCtrl : GET /api/availability?specialtyId[&doctorId]
+note right : AvailabilityService.getAvailability\n→ RosterRepository.findSlots(today … today+13)
+RefCtrl --> UI : { days[ { date, shifts[ { status, remainingSlots } ] } ] }
+
+Patient -> UI : pick date + shift, enter reason, confirm
+UI -> Api : appointmentsApi.book({ specialtyId, date, shiftId, doctorId?, reason })
+Api -> Auth : POST /api/appointments\nAuthorization: Bearer <jwt>
+Auth -> AuthSvc : getCurrentUser(userId)
+AuthSvc -> DB : UserRepository.findById
+alt token invalid / user deleted
+  Auth --> UI : 401 INVALID_TOKEN
+else account deactivated
+  Auth --> UI : 403 ACCOUNT_DISABLED
+end
+Auth -> Role : req.user = { id, role (from DB) }
+alt role ≠ PATIENT
+  Role --> UI : 403 FORBIDDEN
+end
+Role -> Ctrl : book(req, res)
+Ctrl -> Ctrl : bookSchema.parse(body)
+alt invalid body
+  Ctrl --> UI : 400 VALIDATION_ERROR { details[ { path, code } ] }
+end
+Ctrl -> Svc : book(patientId, req)
+
+group 6.1 window and shift start
+  Svc -> Svc : bookingWindow(now)
+  alt date < today
+    Svc --> UI : 400 DATE_IN_PAST
+  else date > today + 13
+    Svc --> UI : 400 DATE_OUTSIDE_BOOKING_WINDOW
+  end
+  Svc -> ShiftRepo : findById(shiftId)
+  ShiftRepo -> DB
+  Svc -> Svc : hasTimePassed(date, shift.startTime, now)
+  alt shift started
+    Svc --> UI : 400 SHIFT_ALREADY_STARTED
+  end
+end
+
+group runInTransaction (steps 6.2 – 6.8)
+  Svc -> ApptRepo : 6.2 findActiveForPatientInSlot(patientId, date, shiftId, tx)
+  ApptRepo -> DB
+  alt already booked in this date + shift
+    Svc --> UI : 409 DUPLICATE_BOOKING
+  end
+  Svc -> RosterRepo : 6.3 findSlots({ specialtyId, doctorId?, shiftId, date }, tx)
+  RosterRepo -> DB : active doctor, room and specialty only;\nactiveCount = appointments not CANCELLED
+  alt no roster entry
+    Svc --> UI : 404 NO_DOCTOR_ON_DUTY
+  end
+  Svc -> Svc : 6.4–6.5 pickLeastBooked(candidates)\n(free capacity; fewest bookings; tie → lowest doctorId)
+  alt every entry full
+    Svc --> UI : 409 SHIFT_FULL
+  end
+  Svc -> RosterRepo : 6.6 takeNextQueueNumber(entryId, tx)
+  RosterRepo -> DB : nextQueueNumber += 1 (returns the old value)
+  Svc -> ApptRepo : 6.7 codeExists(generateAppointmentCode(), tx)
+  Svc -> ApptRepo : 6.8 create({ code, patientId, rosterEntryId, queueNumber,\nstatus: INITIAL_STATUS (BOOKED), reason, bookedAt: now }, tx)
+  ApptRepo -> DB
+end
+
+Svc -> Svc : toAppointmentView(appointment, patient, now)\n(+ allowedActions)
+Svc --> Ctrl : AppointmentView
+Ctrl --> Api : 201 { appointment }
+Api --> UI : appointment
+UI --> Patient : BookingSuccess: code + queue number,\ndoctor, room, date, shift
+
+note over DB
+  DATABASE_URL has ?connection_limit=1, so booking transactions run
+  one at a time: no overbooking and no duplicate queue numbers.
+  unique (rosterEntryId, queueNumber) is the last safety net.
+end note
+
+@enduml

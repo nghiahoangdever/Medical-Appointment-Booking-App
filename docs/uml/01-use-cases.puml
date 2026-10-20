@@ -1,0 +1,130 @@
+@startuml use-cases
+' MediSchedule: use case diagram. Matches .claude/docs/design_mapping.md
+' ("Use cases -> endpoint -> service method"). UC-P8 (profile) is planned and not shown.
+
+title MediSchedule: Use cases
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor<<shared>> #F1F5F9
+}
+
+actor "User" as User
+actor "Patient" as Patient
+actor "Receptionist" as Receptionist
+actor "Doctor" as Doctor
+actor "Admin" as Admin
+
+Patient -up-|> User
+Receptionist -up-|> User
+Doctor -up-|> User
+Admin -up-|> User
+
+rectangle "MediSchedule" {
+  usecase "Log in" as UC_Login
+  usecase "Log out" as UC_Logout
+  usecase "Validate status transition\n(state machine + guards)" as UC_Validate <<shared>>
+
+  package "Patient" {
+    usecase "UC-P1 Register account" as P1
+    usecase "UC-P2 Browse specialties\nand doctors" as P2
+    usecase "UC-P3 View availability" as P3
+    usecase "UC-P4 Book appointment" as P4
+    usecase "UC-P5 View my appointments" as P5
+    usecase "UC-P6 View appointment details" as P6
+    usecase "UC-P7 Cancel appointment" as P7
+  }
+
+  package "Reception" {
+    usecase "UC-R1 View day list\n(filters)" as R1
+    usecase "UC-R2 Search by code / phone" as R2
+    usecase "UC-R3 Check in patient" as R3
+    usecase "UC-R4 Cancel for patient" as R4
+    usecase "UC-R5 Mark no-show" as R5
+    usecase "UC-R6 View patient details" as R6
+    usecase "UC-R7 Add note" as R7
+  }
+
+  package "Doctor" {
+    usecase "UC-D1 View duty schedule" as D1
+    usecase "UC-D2 View shift queue" as D2
+    usecase "UC-D3 Call next patient" as D3
+    usecase "UC-D4 Start a specific patient" as D4
+    usecase "UC-D5 Complete examination" as D5
+    usecase "UC-D6 Mark no-show" as D6
+    usecase "UC-D7 View patient details" as D7
+    usecase "UC-D8 Add note" as D8
+  }
+
+  package "Administration" {
+    usecase "UC-A1 Manage specialties" as A1
+    usecase "UC-A2 Manage rooms" as A2
+    usecase "UC-A3 Manage doctor accounts" as A3
+    usecase "UC-A4 Manage receptionist accounts" as A4
+    usecase "UC-A5 Edit shift times" as A5
+    usecase "UC-A6 Manage weekly roster" as A6
+    usecase "UC-A7 Copy previous week" as A7
+    usecase "UC-A8 View all appointments" as A8
+  }
+}
+
+User --> UC_Login
+User --> UC_Logout
+
+Patient --> P1
+Patient --> P2
+Patient --> P3
+Patient --> P4
+Patient --> P5
+Patient --> P6
+Patient --> P7
+
+Receptionist --> R1
+Receptionist --> R2
+Receptionist --> R3
+Receptionist --> R4
+Receptionist --> R5
+Receptionist --> R6
+Receptionist --> R7
+
+Doctor --> D1
+Doctor --> D2
+Doctor --> D3
+Doctor --> D4
+Doctor --> D5
+Doctor --> D6
+Doctor --> D7
+Doctor --> D8
+
+Admin --> A1
+Admin --> A2
+Admin --> A3
+Admin --> A4
+Admin --> A5
+Admin --> A6
+Admin --> A7
+Admin --> A8
+Admin --> R4 : cancel from\nthe overview
+
+P4 ..> P3 : <<include>>
+P5 <.. P6 : <<extend>>
+D3 ..> D4 : <<include>>
+D2 ..> D7 : <<include>>
+R1 ..> R6 : <<include>>
+A7 ..> A6 : <<extend>>
+
+P7 ..> UC_Validate : <<include>>
+R3 ..> UC_Validate : <<include>>
+R4 ..> UC_Validate : <<include>>
+R5 ..> UC_Validate : <<include>>
+D4 ..> UC_Validate : <<include>>
+D5 ..> UC_Validate : <<include>>
+D6 ..> UC_Validate : <<include>>
+
+note right of UC_Validate
+  transition(from, action, role)
+  + guardFailure(facts, action, actor, now)
+  (server/src/domain/)
+end note
+
+@enduml

@@ -75,6 +75,16 @@ export function RosterGrid({ week, selected, onSelect }: RosterGridProps) {
           </tr>
         </thead>
         <tbody>
+          {week.rooms.length === 0 && (
+            <tr>
+              <td
+                colSpan={1 + week.days.length * week.shifts.length}
+                className="px-4 py-10 text-center text-sm text-slate-500"
+              >
+                Chưa có phòng khám nào. Thêm phòng ở trang “Phòng khám” trước khi xếp lịch trực.
+              </td>
+            </tr>
+          )}
           {week.rooms.map((room) => (
             <tr key={room.id} className="border-b border-slate-100 last:border-0">
               <td className="px-3 py-2 align-top">

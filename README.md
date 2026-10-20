@@ -80,23 +80,26 @@ Route → Controller → Service → Repository → SQLite (Prisma)
 server/
   prisma/            schema.prisma (class diagram), migrations/, seed.ts
   src/
-    domain/          enums.ts, errors.ts, time.ts, booking.ts, appointmentStateMachine.ts
+    domain/          enums.ts, errors.ts, time.ts, booking.ts, appointmentStateMachine.ts,
+                     appointmentRules.ts (guards), rosterRules.ts
     middleware/      authenticate.ts, requireRole.ts, errorHandler.ts
     modules/<area>/  <area>.routes.ts · .controller.ts · .service.ts · .repository.ts
     validation.ts    shared zod pieces (error-code messages)
     app.ts           builds the Express app (used by server.ts and tests)
-  tests/
+  tests/             unit, service and HTTP tests; e2e.flow.test.ts = one full day, all roles
 client/src/
   api/               fetch wrapper (JWT, ApiError) + one file per resource
   auth/              AuthContext, ProtectedRoute, role → home page
   i18n/              Vietnamese labels and error-code messages
   lib/date.ts        dd/MM/yyyy formatting and parsing
-  hooks/useApi.ts    load + refresh (+ optional polling)
-  components/        Layout, AppointmentCard, CancelAppointment, PatientInfo, AppointmentNotes, StatusBadge, RefreshButton, ui/…
-  pages/             auth/, patient/ (+ booking/ wizard), more per phase
+  hooks/             useApi (load + refresh + optional polling), useSubmit (one mutation)
+  components/        Layout, ErrorBoundary, LoadError, AppointmentCard, StaffActions, CancelAppointment,
+                     PatientInfo, AppointmentNotes, StatusBadge, RefreshButton, EmptyState, ui/…
+  pages/             auth/, patient/ (+ booking/ wizard), reception/, doctor/, admin/ (+ roster/)
+docs/uml/            PlantUML sources for the diagrams (see "UML diagrams" below)
 ```
 
-### API (so far)
+### API
 
 | Method & path                                                                                                                   | Role                         | Use case     |
 | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ------------ |
@@ -128,18 +131,67 @@ Every appointment in a response carries `allowedActions`: what the current user 
 
 `GET /api/availability` returns the **whole 14-day booking window** in one response (each day → shifts → places left), not a single date as the original sequence diagram said. The wizard can then gray out full or closed days without one request per day. In the "patient books" sequence diagram, step 3 becomes `GET /availability?specialtyId[&doctorId]`.
 
-### Design → code map
+## Design → code map
 
-| Design artifact                                | Where it lives                                                                                             |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Class diagram                                  | `server/prisma/schema.prisma`                                                                              |
-| Enumerations (Role, Gender, AppointmentStatus) | `server/src/domain/enums.ts`                                                                               |
-| Use cases                                      | one route + controller method each (e.g. UC-P1 Register → `POST /api/auth/register`)                       |
-| Access control per actor                       | `authenticate` + `requireRole(...)` middleware                                                             |
-| State diagram (appointment status)             | `server/src/domain/appointmentStateMachine.ts`: `TRANSITIONS` table, one row per arrow                     |
-| State diagram guards                           | `server/src/domain/appointmentRules.ts`: `guardFailure`, `allowedActions`                                  |
-| Sequence: patient books an appointment         | `BookingService.book` in `server/src/modules/appointments/booking.service.ts` (steps numbered in comments) |
-| Booking rules (window, capacity, auto-assign)  | `server/src/domain/booking.ts`                                                                             |
+Each diagram in `docs/uml/` maps to code as follows. The step-by-step tables (every use case → endpoint → service method, and every sequence message → method) are in `.claude/docs/design_mapping.md`.
+
+| Diagram                                          | Element                                                  | Code                                                                                                                                                         |
+| ------------------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Use cases (`01-use-cases.puml`)                  | each use case                                            | one route + controller method + service method (e.g. UC-P4 → `POST /api/appointments` → `AppointmentController.book` → `BookingService.book`)                |
+|                                                  | actors                                                   | `authenticate` + `requireRole(...)` on each route; `Role` in `server/src/domain/enums.ts`                                                                    |
+|                                                  | «include» "validate status transition"                   | `transition()` + `guardFailure()` (`server/src/domain/`)                                                                                                     |
+| Domain classes (`02-class-domain.puml`)          | entities, attributes, multiplicities, unique constraints | `server/prisma/schema.prisma`                                                                                                                                |
+|                                                  | enumerations                                             | `server/src/domain/enums.ts`, `AppointmentAction` in `appointmentStateMachine.ts`                                                                            |
+| Layered classes (`03-class-architecture.puml`)   | boundary / control / entity-access classes               | `*Controller`, `*Service`, `*Repository` in `server/src/modules/**` (one singleton each, constructor injection)                                              |
+|                                                  | domain modules                                           | `appointmentStateMachine.ts`, `appointmentRules.ts`, `booking.ts`, `rosterRules.ts`                                                                          |
+| Appointment states (`04-state-appointment.puml`) | each arrow                                               | one row of `TRANSITIONS` (`appointmentStateMachine.ts`) and one `POST /api/appointments/:id/<action>` endpoint                                               |
+|                                                  | each `[guard]`                                           | a case of `guardFailure` (`appointmentRules.ts`); the same rules produce `allowedActions` in every response                                                  |
+| Sequence: patient books (`05-…`)                 | steps 6.1–6.8                                            | `BookingService.book` (`server/src/modules/appointments/booking.service.ts`, steps numbered in comments), inside `runInTransaction`                          |
+| Sequence: doctor calls next (`06-…`)             | call next → start                                        | `QueueService.callNext` → `AppointmentRepository.findFirstCheckedIn` → `AppointmentService.start` → `perform` (`transition`, `guardFailure`, `updateStatus`) |
+| Sequence: admin copies previous week (`07-…`)    | loop over source entries, skip with reason               | `RosterService.copyPreviousWeek` → `rosterDateFailure` / `placementFailure` → `RosterRepository.create`                                                      |
+
+Tests that keep code and diagrams in step: `appointmentStateMachine.test.ts` (every arrow, every forbidden move), `appointmentRules.test.ts` (guard boundaries), `booking.service.test.ts`, `queue.service.test.ts` and `roster.service.test.ts` (sequence rules with fixed clocks), and `e2e.flow.test.ts` (one full clinic day through the HTTP API, all four roles, real logins).
+
+## UML diagrams
+
+PlantUML sources live in `docs/uml/`:
+
+| File                                 | Diagram                                                       |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `01-use-cases.puml`                  | Use cases per actor                                           |
+| `02-class-domain.puml`               | Domain model (entities, enumerations, constraints)            |
+| `03-class-architecture.puml`         | Server classes by layer (controllers, services, repositories) |
+| `04-state-appointment.puml`          | Appointment state machine with guards                         |
+| `05-sequence-patient-books.puml`     | Sequence: patient books an appointment                        |
+| `06-sequence-doctor-calls-next.puml` | Sequence: doctor calls the next patient                       |
+| `07-sequence-admin-copies-week.puml` | Sequence: admin copies the previous week's roster             |
+
+To render them, use the VS Code "PlantUML" extension (Alt+D to preview, or "Export Current Diagram"), or the PlantUML jar (needs Java; the class and use case diagrams also need Graphviz): `java -jar plantuml.jar -tsvg docs/uml/*.puml`. Renderers that send the source to a server (such as the public PlantUML server) work too, if you don't mind uploading the diagram text.
+
+## Known limitations
+
+- **A booked shift can't be reassigned to another doctor.** A roster entry's doctor, date and shift are fixed after creation, and a doctor's specialty is fixed, because appointments get their doctor and specialty through the entry. Admins can move the entry to another room, change `maxPatients`, or cancel the bookings.
+- **Desktop only.** Built for 1280px-wide browsers and up. There is no mobile or tablet layout.
+- **No real-time updates.** Screens refresh by polling (doctor queue every 15 s, reception list and doctor schedule every 30 s) and with the "Làm mới" button. A change made by someone else can take that long to appear.
+- **No notifications.** Patients get no email, SMS or push message for booking confirmations, reminders, or cancellations made by the clinic.
+- **No profile editing (UC-P8) and no password change or reset.** Admins can set a new password for staff accounts. Patients can't change theirs yet.
+- **Sessions are a single 8-hour JWT** stored in `localStorage`, with no refresh token. Logging out only forgets the token on that browser. A deactivated account is still blocked immediately, because every request re-checks the account.
+- **Reception can't book for a patient.** Walk-ins must register and book themselves.
+- **No rescheduling.** A patient cancels and books again, and gets a new queue number.
+- **Fixed shifts.** There are exactly two shifts (Morning, Afternoon). Admins can change their times, and the change applies to bookings already made.
+- **One clinic, one timezone, SQLite.** Dates and times are local strings, and `connection_limit=1` serializes writes. That suits one clinic, but not many concurrent users.
+- **Tests cover the server only.** The client has no automated tests.
+
+## Future work
+
+- Reassign a booked shift to another doctor of the same specialty (move the roster entry's doctor, notify the affected patients, and record who made the change).
+- Responsive layout for phones and tablets, starting with the patient booking wizard and "Lịch hẹn của tôi".
+- Real-time queue and list updates (Server-Sent Events or WebSockets) in place of polling.
+- Notifications: booking confirmation, day-before reminder, and messages when the clinic cancels or a shift changes (email/SMS).
+- Patient profile and password management (UC-P8), and password reset by email.
+- Reception booking on behalf of a patient (walk-ins, phone bookings) and rescheduling.
+- Refresh tokens / server-side sessions, and an audit log of staff actions.
+- Client component tests and browser end-to-end tests (e.g. Playwright).
 
 ## Status
 
@@ -150,4 +202,4 @@ Every appointment in a response carries `allowedActions`: what the current user 
 - [x] **Phase 3:** reception (day list with filters, search, check-in, cancel, no-show, notes, patient details)
 - [x] **Phase 4:** doctor queue (duty schedule, shift queue, call next, start, complete, no-show, notes, polling)
 - [x] **Phase 5:** admin management (specialties, rooms, doctor/receptionist accounts, shift times, weekly roster editor + copy previous week, all-appointments overview)
-- [ ] Phase 6: polish (error/empty states) and end-to-end tests
+- [x] **Phase 6:** polish (retryable error and empty states, error boundary, session-ended message), end-to-end API test across all four roles, PlantUML diagrams, design → code map, known limitations
