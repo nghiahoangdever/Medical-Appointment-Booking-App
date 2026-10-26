@@ -92,7 +92,7 @@ export function SpecialtiesPage() {
                   />
                 )}
                 {data.map((s) => (
-                  <tr key={s.id} className={editing?.id === s.id ? 'bg-teal-50/50' : undefined}>
+                  <tr key={s.id} className={editing?.id === s.id ? 'bg-brand-50/50' : undefined}>
                     <Td className="font-medium">{s.name}</Td>
                     <Td className="text-slate-500">{s.description || '—'}</Td>
                     <Td className="text-right tabular-nums">{s.activeDoctorCount}</Td>

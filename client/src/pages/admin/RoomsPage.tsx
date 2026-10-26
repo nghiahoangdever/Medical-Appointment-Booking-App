@@ -92,7 +92,7 @@ export function RoomsPage() {
                   />
                 )}
                 {data.map((r) => (
-                  <tr key={r.id} className={editing?.id === r.id ? 'bg-teal-50/50' : undefined}>
+                  <tr key={r.id} className={editing?.id === r.id ? 'bg-brand-50/50' : undefined}>
                     <Td className="font-mono font-medium">{r.code}</Td>
                     <Td>{r.name}</Td>
                     <Td>{r.floor || '—'}</Td>

@@ -10,7 +10,7 @@ export interface RosterCell {
 
 // One colour per specialty (by order of first appearance), so the week reads at a glance.
 const PALETTE = [
-  'bg-teal-50 text-teal-900 ring-teal-200',
+  'bg-brand-50 text-brand-900 ring-brand-200',
   'bg-sky-50 text-sky-900 ring-sky-200',
   'bg-violet-50 text-violet-900 ring-violet-200',
   'bg-amber-50 text-amber-900 ring-amber-200',
@@ -53,7 +53,7 @@ export function RosterGrid({ week, selected, onSelect }: RosterGridProps) {
                 key={day.date}
                 colSpan={week.shifts.length}
                 className={`border-b border-l border-slate-200 px-1 pt-2 pb-1 font-semibold ${
-                  day.date === today ? 'text-teal-700' : ''
+                  day.date === today ? 'text-brand-700' : ''
                 } ${day.editable ? '' : 'text-slate-400'}`}
               >
                 {weekdayShort(day.date)} {formatDayMonth(day.date)}
@@ -119,8 +119,8 @@ export function RosterGrid({ week, selected, onSelect }: RosterGridProps) {
                             type="button"
                             onClick={() => onSelect(cell)}
                             aria-label="Thêm ca trực"
-                            className={`flex h-full w-full items-center justify-center rounded text-base text-slate-300 hover:bg-slate-100 hover:text-teal-700 ${
-                              isSelected ? 'bg-teal-50 text-teal-700 ring-2 ring-teal-500' : ''
+                            className={`flex h-full w-full items-center justify-center rounded text-base text-slate-300 hover:bg-slate-100 hover:text-brand-700 ${
+                              isSelected ? 'bg-brand-50 text-brand-700 ring-2 ring-brand-500' : ''
                             }`}
                           >
                             +
@@ -158,7 +158,7 @@ function EntryChip({
       onClick={onClick}
       title={`${entry.doctor.title} ${entry.doctor.fullName} — ${entry.doctor.specialty.name}`}
       className={`flex h-full w-full flex-col justify-between rounded px-1 py-0.5 text-left ring-1 ${color} ${
-        selected ? 'ring-2 ring-teal-600' : ''
+        selected ? 'ring-2 ring-brand-600' : ''
       } ${entry.doctor.isActive ? '' : 'opacity-60'}`}
     >
       <span className="truncate font-medium">{shortName}</span>

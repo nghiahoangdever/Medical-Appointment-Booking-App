@@ -13,7 +13,7 @@ export function PatientInfo({ patient }: { patient: PatientDetails }) {
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
         <Item label="Họ và tên">{patient.fullName}</Item>
         <Item label="Số điện thoại">
-          <a href={`tel:${patient.phone}`} className="text-teal-700 hover:underline">
+          <a href={`tel:${patient.phone}`} className="text-brand-700 hover:underline">
             {patient.phone}
           </a>
         </Item>

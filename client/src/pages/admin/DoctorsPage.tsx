@@ -118,7 +118,7 @@ export function DoctorsPage() {
                 />
               )}
               {doctors.map((d) => (
-                <tr key={d.id} className={editing?.id === d.id ? 'bg-teal-50/50' : undefined}>
+                <tr key={d.id} className={editing?.id === d.id ? 'bg-brand-50/50' : undefined}>
                   <Td className="font-medium">{doctorName(d)}</Td>
                   <Td>{d.specialty.name}</Td>
                   <Td>

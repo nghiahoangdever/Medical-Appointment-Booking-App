@@ -50,8 +50,8 @@ function Chip({
       onClick={onClick}
       className={`rounded-full px-3 py-1 text-sm ring-1 transition ${
         active
-          ? 'bg-teal-600 text-white ring-teal-600'
-          : 'bg-white text-slate-700 ring-slate-300 hover:ring-teal-400'
+          ? 'bg-brand-600 text-white ring-brand-600'
+          : 'bg-white text-slate-700 ring-slate-300 hover:ring-brand-400'
       }`}
     >
       {children}

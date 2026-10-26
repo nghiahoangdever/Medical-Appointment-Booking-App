@@ -20,7 +20,7 @@ export function DayNavigator({ date, onChange }: DayNavigatorProps) {
       </Button>
       <span className="min-w-48 text-center font-medium text-slate-900">
         {formatDateLong(date)}
-        {isToday && <span className="ml-1 text-sm font-normal text-teal-700">(hôm nay)</span>}
+        {isToday && <span className="ml-1 text-sm font-normal text-brand-700">(hôm nay)</span>}
       </span>
       <Button variant="secondary" aria-label="Ngày sau" onClick={() => onChange(addDays(date, 1))}>
         ›

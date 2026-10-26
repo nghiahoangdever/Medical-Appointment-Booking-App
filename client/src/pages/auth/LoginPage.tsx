@@ -53,7 +53,7 @@ export function LoginPage() {
       footer={
         <>
           Bệnh nhân mới?{' '}
-          <Link to="/register" className="font-medium text-teal-700 hover:underline">
+          <Link to="/register" className="font-medium text-brand-700 hover:underline">
             Tạo tài khoản
           </Link>
         </>
@@ -93,7 +93,7 @@ export function LoginPage() {
               <li key={email}>
                 <button
                   type="button"
-                  className="text-left hover:text-teal-700"
+                  className="text-left hover:text-brand-700"
                   onClick={() => {
                     setIdentifier(email);
                     setPassword('password123');

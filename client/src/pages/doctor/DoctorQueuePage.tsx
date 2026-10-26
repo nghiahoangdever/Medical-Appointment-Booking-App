@@ -190,7 +190,7 @@ export function DoctorQueuePage() {
 
 function BackLink() {
   return (
-    <Link to="/doctor" className="mb-3 inline-block text-sm text-teal-700 hover:underline">
+    <Link to="/doctor" className="mb-3 inline-block text-sm text-brand-700 hover:underline">
       ← Lịch trực
     </Link>
   );

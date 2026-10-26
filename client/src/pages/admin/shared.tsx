@@ -70,7 +70,7 @@ export function RowAction({
       onClick={onClick}
       disabled={disabled}
       className={`text-sm font-medium hover:underline disabled:opacity-50 ${
-        tone === 'danger' ? 'text-rose-700' : 'text-teal-700'
+        tone === 'danger' ? 'text-rose-700' : 'text-brand-700'
       }`}
     >
       {children}
