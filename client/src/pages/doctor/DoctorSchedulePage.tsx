@@ -59,11 +59,11 @@ export function DoctorSchedulePage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {data.map((s) => (
-                <tr key={s.id} className={s.date === today ? 'bg-teal-50/40' : undefined}>
+                <tr key={s.id} className={s.date === today ? 'bg-brand-50/40' : undefined}>
                   <td className="px-4 py-3 font-medium text-slate-900">
                     {formatDateLong(s.date)}
                     {s.date === today && (
-                      <span className="ml-2 rounded-full bg-teal-600 px-2 py-0.5 text-xs font-medium text-white">
+                      <span className="ml-2 rounded-full bg-brand-600 px-2 py-0.5 text-xs font-medium text-white">
                         Hôm nay
                       </span>
                     )}
@@ -83,7 +83,7 @@ export function DoctorSchedulePage() {
                   <td className="px-4 py-3 text-right">
                     <Link
                       to={`/doctor/queue/${s.id}`}
-                      className="font-medium whitespace-nowrap text-teal-700 hover:underline"
+                      className="font-medium whitespace-nowrap text-brand-700 hover:underline"
                     >
                       Mở hàng đợi →
                     </Link>

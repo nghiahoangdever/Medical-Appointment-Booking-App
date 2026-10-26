@@ -22,10 +22,10 @@ export function ChoiceCard({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={selected}
-      className={`rounded-xl bg-white p-4 text-left ring-1 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60 ${
+      className={`rounded-xl bg-white p-4 text-left ring-1 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60 ${
         selected
-          ? 'bg-teal-50 ring-2 ring-teal-600'
-          : 'ring-slate-200 hover:ring-teal-400 disabled:hover:ring-slate-200'
+          ? 'bg-brand-50 ring-2 ring-brand-600'
+          : 'ring-slate-200 hover:ring-brand-400 disabled:hover:ring-slate-200'
       } ${className}`}
     >
       {children}

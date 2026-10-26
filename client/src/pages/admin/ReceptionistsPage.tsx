@@ -96,7 +96,7 @@ export function ReceptionistsPage() {
                   />
                 )}
                 {data.map((u) => (
-                  <tr key={u.id} className={editing?.id === u.id ? 'bg-teal-50/50' : undefined}>
+                  <tr key={u.id} className={editing?.id === u.id ? 'bg-brand-50/50' : undefined}>
                     <Td className="font-medium">{u.fullName}</Td>
                     <Td>{u.email}</Td>
                     <Td>{u.phone}</Td>

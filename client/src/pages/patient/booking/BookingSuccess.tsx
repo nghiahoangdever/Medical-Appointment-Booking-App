@@ -32,9 +32,9 @@ export function BookingSuccess({
             {a.code}
           </p>
         </div>
-        <div className="rounded-xl bg-teal-50 p-3">
-          <p className="text-xs text-teal-700">Số thứ tự</p>
-          <p className="mt-1 text-xl font-semibold text-teal-800">{a.queueNumber}</p>
+        <div className="rounded-xl bg-brand-50 p-3">
+          <p className="text-xs text-brand-700">Số thứ tự</p>
+          <p className="mt-1 text-xl font-semibold text-brand-800">{a.queueNumber}</p>
         </div>
       </div>
 

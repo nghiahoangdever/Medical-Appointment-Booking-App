@@ -79,7 +79,7 @@ export function RosterPage() {
           <span className="min-w-56 text-center font-medium text-slate-900">
             Tuần {formatDateRange(weekStart, addDays(weekStart, 6))}
             {weekStart === thisWeek && (
-              <span className="ml-1 text-sm font-normal text-teal-700">(tuần này)</span>
+              <span className="ml-1 text-sm font-normal text-brand-700">(tuần này)</span>
             )}
           </span>
           <Button

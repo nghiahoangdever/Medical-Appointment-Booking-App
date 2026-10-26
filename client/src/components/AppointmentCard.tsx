@@ -38,7 +38,7 @@ export function AppointmentCard({
         aria-controls={panelId}
         className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-slate-50"
       >
-        <div className="w-14 shrink-0 rounded-lg bg-teal-50 py-1.5 text-center text-teal-800">
+        <div className="w-14 shrink-0 rounded-lg bg-brand-50 py-1.5 text-center text-brand-800">
           <div className="text-xs font-medium">{weekdayShort(a.date)}</div>
           <div className="text-sm font-semibold">{formatDayMonth(a.date)}</div>
         </div>

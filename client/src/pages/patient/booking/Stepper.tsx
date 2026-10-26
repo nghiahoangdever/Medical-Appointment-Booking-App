@@ -24,14 +24,14 @@ export function Stepper({ current, onGoTo }: StepperProps) {
               className="group flex w-full flex-col gap-1.5 text-left disabled:cursor-default"
             >
               <span
-                className={`h-1.5 rounded-full ${active || done ? 'bg-teal-600' : 'bg-slate-200'}`}
+                className={`h-1.5 rounded-full ${active || done ? 'bg-brand-600' : 'bg-slate-200'}`}
               />
               <span
                 className={`text-xs font-medium sm:text-sm ${
                   active
-                    ? 'text-teal-700'
+                    ? 'text-brand-700'
                     : done
-                      ? 'text-slate-700 group-hover:text-teal-700'
+                      ? 'text-slate-700 group-hover:text-brand-700'
                       : 'text-slate-400'
                 }`}
               >

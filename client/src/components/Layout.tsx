@@ -35,9 +35,9 @@ export function Layout() {
   return (
     <div className="min-h-screen">
       <DevClockBanner />
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-brand-900 bg-brand-800">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-          <Logo />
+          <Logo inverted />
           <nav className="order-last flex w-full gap-1 overflow-x-auto sm:order-none sm:w-auto sm:flex-1">
             {NAV_ITEMS[user.role].map((item) => (
               <NavLink
@@ -46,7 +46,9 @@ export function Layout() {
                 end
                 className={({ isActive }) =>
                   `shrink-0 rounded-md px-3 py-1.5 text-sm font-medium ${
-                    isActive ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'
+                    isActive
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/75 hover:bg-white/10 hover:text-white'
                   }`
                 }
               >
@@ -55,14 +57,14 @@ export function Layout() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
-            <span className="hidden text-slate-700 sm:inline">{user.fullName}</span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            <span className="hidden text-white/90 sm:inline">{user.fullName}</span>
+            <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium text-white">
               {ROLE_LABEL[user.role]}
             </span>
             <button
               type="button"
               onClick={() => logout()}
-              className="rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              className="rounded-md px-2 py-1 text-white/75 hover:bg-white/10 hover:text-white"
             >
               Đăng xuất
             </button>

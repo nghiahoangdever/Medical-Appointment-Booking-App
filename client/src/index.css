@@ -1,5 +1,21 @@
 @import 'tailwindcss';
 
+/* "Đại dương" palette: navy brand scale + sky accent. Use brand-* instead of a named Tailwind colour. */
+@theme {
+  --color-brand-50: #eef4fb;
+  --color-brand-100: #d9e6f5;
+  --color-brand-200: #b3ccea;
+  --color-brand-300: #84abd9;
+  --color-brand-400: #5288c6;
+  --color-brand-500: #2f6bb3;
+  --color-brand-600: #1f4e8c;
+  --color-brand-700: #183e70;
+  --color-brand-800: #122f55;
+  --color-brand-900: #0d2340;
+  --color-brand-950: #081729;
+  --color-accent: #0ea5e9;
+}
+
 body {
   @apply bg-slate-50 text-slate-800 antialiased;
 }
