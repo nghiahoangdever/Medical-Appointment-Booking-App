@@ -6,14 +6,14 @@ import type { PatientDetails } from '../types';
 /** UC-R6 / UC-D7: patient details inside a staff appointment card. */
 export function PatientInfo({ patient }: { patient: PatientDetails }) {
   return (
-    <section className="rounded-lg bg-slate-50 p-3">
-      <h3 className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+    <section className="rounded-lg bg-slate-25 p-3 ring-1 ring-slate-100 ring-inset">
+      <h3 className="mb-2 text-xs font-semibold tracking-[0.05em] text-slate-500 uppercase">
         Thông tin bệnh nhân
       </h3>
-      <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+      <dl className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,200px),1fr))] gap-x-6 gap-y-2 text-sm">
         <Item label="Họ và tên">{patient.fullName}</Item>
         <Item label="Số điện thoại">
-          <a href={`tel:${patient.phone}`} className="text-brand-700 hover:underline">
+          <a href={`tel:${patient.phone}`} className="tabular">
             {patient.phone}
           </a>
         </Item>

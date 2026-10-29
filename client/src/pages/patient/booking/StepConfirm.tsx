@@ -20,6 +20,8 @@ interface StepConfirmProps {
   onPickAnotherShift: () => void;
 }
 
+const REASON_MAX = 500;
+
 /** UC-P4: review the choices, add a reason, and book. */
 export function StepConfirm({
   specialty,
@@ -57,7 +59,7 @@ export function StepConfirm({
     <section className="max-w-2xl space-y-5">
       <h2 className="text-lg font-semibold text-slate-900">Xác nhận thông tin đặt lịch</h2>
 
-      <dl className="divide-y divide-slate-100 rounded-xl bg-white px-4 ring-1 ring-slate-200">
+      <dl className="rounded-xl bg-white px-4 ring-1 ring-slate-200 [&>div:last-child]:border-b-0">
         <Row label="Chuyên khoa">{specialty.name}</Row>
         <Row label="Bác sĩ">{doctor ? doctorName(doctor) : 'Hệ thống tự phân công'}</Row>
         <Row label="Ngày khám">{formatDateLong(date)}</Row>
@@ -68,7 +70,8 @@ export function StepConfirm({
 
       <TextAreaField
         label="Lý do khám / triệu chứng (không bắt buộc)"
-        maxLength={500}
+        maxLength={REASON_MAX}
+        hint={`${reason.length}/${REASON_MAX} ký tự`}
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         error={fieldErrorMessages(error).reason}
@@ -94,7 +97,7 @@ export function StepConfirm({
         </Alert>
       )}
 
-      <Button loading={submitting} onClick={() => void submit()} className="w-full sm:w-auto">
+      <Button loading={submitting} onClick={() => void submit()}>
         Xác nhận đặt lịch
       </Button>
     </section>
@@ -103,8 +106,8 @@ export function StepConfirm({
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-0.5 py-3 sm:flex-row sm:gap-4">
-      <dt className="w-32 shrink-0 text-sm text-slate-500">{label}</dt>
+    <div className="flex flex-wrap gap-x-4 gap-y-0.5 border-b border-slate-100 py-3">
+      <dt className="w-40 shrink-0 text-sm text-slate-500">{label}</dt>
       <dd className="text-sm font-medium text-slate-900">{children}</dd>
     </div>
   );

@@ -9,7 +9,7 @@ interface StepperProps {
 
 export function Stepper({ current, onGoTo }: StepperProps) {
   return (
-    <ol className="mb-6 grid grid-cols-4 gap-2">
+    <ol aria-label="Các bước đặt lịch" className="mb-6 grid grid-cols-4 gap-2">
       {STEPS.map((label, i) => {
         const step = i + 1;
         const done = step < current;
@@ -21,22 +21,25 @@ export function Stepper({ current, onGoTo }: StepperProps) {
               disabled={!done}
               onClick={() => onGoTo(step)}
               aria-current={active ? 'step' : undefined}
-              className="group flex w-full flex-col gap-1.5 text-left disabled:cursor-default"
+              className="group flex w-full flex-col gap-1.5 rounded text-left disabled:cursor-default"
             >
               <span
-                className={`h-1.5 rounded-full ${active || done ? 'bg-brand-600' : 'bg-slate-200'}`}
+                className={`h-1 rounded-full transition-colors duration-200 ${
+                  active || done ? 'bg-brand-600' : 'bg-slate-200'
+                }`}
               />
               <span
-                className={`text-xs font-medium sm:text-sm ${
+                className={`text-sm font-medium ${
                   active
                     ? 'text-brand-700'
                     : done
                       ? 'text-slate-700 group-hover:text-brand-700'
-                      : 'text-slate-400'
+                      : 'text-slate-500'
                 }`}
               >
-                <span className="hidden sm:inline">{step}. </span>
-                {label}
+                {step}. {label}
+                {active && <span className="sr-only"> (bước hiện tại)</span>}
+                {done && <span className="sr-only"> (đã xong)</span>}
               </span>
             </button>
           </li>

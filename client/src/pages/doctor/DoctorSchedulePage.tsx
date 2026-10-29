@@ -20,6 +20,10 @@ const COLUMNS: { status: AppointmentStatus; label: string }[] = [
   { status: 'NO_SHOW', label: 'Vắng mặt' },
 ];
 
+const TH =
+  'border-b border-slate-200 bg-slate-25 px-4 py-3 text-left text-xs font-semibold tracking-[0.05em] whitespace-nowrap text-slate-500 uppercase';
+const TD = 'border-t border-slate-100 px-4 py-3 text-slate-900';
+
 /** UC-D1: the doctor's duty shifts from today on; open one to see its queue. */
 export function DoctorSchedulePage() {
   const load = useCallback(() => doctorApi.schedule().then((r) => r.shifts), []);
@@ -43,24 +47,35 @@ export function DoctorSchedulePage() {
       ) : (
         <div className="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs tracking-wide text-slate-500 uppercase">
+            <caption className="sr-only">Lịch trực của tôi</caption>
+            <thead>
               <tr>
-                <th className="px-4 py-3 font-semibold">Ngày</th>
-                <th className="px-4 py-3 font-semibold">Ca</th>
-                <th className="px-4 py-3 font-semibold">Phòng</th>
+                <th scope="col" className={TH}>
+                  Ngày
+                </th>
+                <th scope="col" className={TH}>
+                  Ca
+                </th>
+                <th scope="col" className={TH}>
+                  Phòng
+                </th>
                 {COLUMNS.map((c) => (
-                  <th key={c.status} className="px-4 py-3 text-right font-semibold">
+                  <th key={c.status} scope="col" className={`${TH} text-right`}>
                     {c.label}
                   </th>
                 ))}
-                <th className="px-4 py-3 text-right font-semibold">Tối đa</th>
-                <th className="px-4 py-3" />
+                <th scope="col" className={`${TH} text-right`}>
+                  Tối đa
+                </th>
+                <th scope="col" className={TH}>
+                  <span className="sr-only">Mở hàng đợi</span>
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {data.map((s) => (
-                <tr key={s.id} className={s.date === today ? 'bg-brand-50/40' : undefined}>
-                  <td className="px-4 py-3 font-medium text-slate-900">
+                <tr key={s.id} className={s.date === today ? 'bg-brand-50' : undefined}>
+                  <td className={`${TD} font-medium whitespace-nowrap`}>
                     {formatDateLong(s.date)}
                     {s.date === today && (
                       <span className="ml-2 rounded-full bg-brand-600 px-2 py-0.5 text-xs font-medium text-white">
@@ -68,23 +83,18 @@ export function DoctorSchedulePage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-700">
+                  <td className={`${TD} whitespace-nowrap text-slate-700`}>
                     {shiftLabel(s.shift.name)} ({s.shift.startTime}–{s.shift.endTime})
                   </td>
-                  <td className="px-4 py-3 text-slate-700">{s.room.code}</td>
+                  <td className={`${TD} code-text text-[13px]`}>{s.room.code}</td>
                   {COLUMNS.map((c) => (
-                    <td key={c.status} className="px-4 py-3 text-right tabular-nums text-slate-900">
-                      {s.counts[c.status] || <span className="text-slate-300">0</span>}
+                    <td key={c.status} className={`${TD} tabular text-right`}>
+                      {s.counts[c.status] || <span className="text-slate-500">0</span>}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-500">
-                    {s.maxPatients}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      to={`/doctor/queue/${s.id}`}
-                      className="font-medium whitespace-nowrap text-brand-700 hover:underline"
-                    >
+                  <td className={`${TD} tabular text-right text-slate-500`}>{s.maxPatients}</td>
+                  <td className={`${TD} text-right`}>
+                    <Link to={`/doctor/queue/${s.id}`} className="font-medium whitespace-nowrap">
                       Mở hàng đợi →
                     </Link>
                   </td>

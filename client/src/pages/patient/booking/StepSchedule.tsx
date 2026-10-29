@@ -1,3 +1,4 @@
+import { CheckIcon } from '@heroicons/react/20/solid';
 import { useCallback } from 'react';
 import { availabilityApi } from '../../../api/booking';
 import { LoadError } from '../../../components/LoadError';
@@ -66,7 +67,7 @@ export function StepSchedule({
             </Alert>
           </div>
         )}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(80px,1fr))] gap-2">
           {data.days.map((day) => (
             <DayButton
               key={day.date}
@@ -87,7 +88,7 @@ export function StepSchedule({
           {activeDay.shifts.length === 0 ? (
             <p className="text-sm text-slate-500">Không có bác sĩ trực trong ngày này.</p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-3">
               {activeDay.shifts.map((shift) => (
                 <ShiftButton
                   key={shift.shiftId}
@@ -121,11 +122,18 @@ function DayButton({
       selected={selected}
       disabled={day.shifts.length === 0}
       onClick={onClick}
-      className="p-2! text-center"
+      className="p-2! text-center!"
     >
       <span className="block text-xs text-slate-500">{weekdayShort(day.date)}</span>
-      <span className="block font-semibold text-slate-900">{formatDayMonth(day.date)}</span>
-      <span className={`mt-1 block text-[11px] ${open ? 'text-emerald-700' : 'text-slate-400'}`}>
+      <span className="tabular block text-base font-semibold text-slate-900">
+        {formatDayMonth(day.date)}
+      </span>
+      <span
+        className={`mt-1 flex items-center justify-center gap-0.5 text-[11px] leading-[14px] font-medium ${
+          open ? 'text-tone-success-fg' : 'text-slate-500'
+        }`}
+      >
+        {open && <CheckIcon aria-hidden="true" className="size-3" />}
         {note}
       </span>
     </ChoiceCard>
@@ -159,11 +167,11 @@ function ShiftButton({
     <ChoiceCard selected={selected} disabled={!available} onClick={onClick}>
       <div className="flex items-baseline justify-between gap-3">
         <p className="font-medium text-slate-900">{shiftLabel(shift.name)}</p>
-        <p className="text-sm text-slate-600">
+        <p className="tabular text-sm whitespace-nowrap text-slate-700">
           {shift.startTime}–{shift.endTime}
         </p>
       </div>
-      <p className={`mt-1 text-sm ${available ? 'text-emerald-700' : 'text-slate-500'}`}>
+      <p className={`mt-1 text-sm ${available ? 'text-tone-success-fg' : 'text-slate-500'}`}>
         {shiftNote(shift)}
         {showDoctorCount && ` · ${shift.doctorsOnDuty} bác sĩ trực`}
       </p>

@@ -43,7 +43,7 @@ export function StepDoctor({ specialty, selected, onSelect }: StepDoctorProps) {
       <p className="mb-3 text-sm text-slate-500">
         Không bắt buộc — bạn có thể để hệ thống tự phân công bác sĩ.
       </p>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-3">
         <ChoiceCard selected={selected === null} onClick={() => onSelect(null)}>
           <p className="font-medium text-slate-900">Bất kỳ bác sĩ nào</p>
           <p className="mt-1 text-sm text-slate-500">

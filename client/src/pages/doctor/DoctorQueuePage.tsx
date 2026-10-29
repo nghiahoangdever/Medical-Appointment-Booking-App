@@ -1,3 +1,4 @@
+import { MegaphoneIcon } from '@heroicons/react/20/solid';
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
@@ -5,8 +6,9 @@ import { doctorApi } from '../../api/doctor';
 import { AppointmentCard } from '../../components/AppointmentCard';
 import { AppointmentNotes } from '../../components/AppointmentNotes';
 import { LoadError } from '../../components/LoadError';
-import { PageHeader } from '../../components/PageHeader';
+import { BackLink, PageHeader } from '../../components/PageHeader';
 import { PatientInfo } from '../../components/PatientInfo';
+import { QueueNumber } from '../../components/QueueNumber';
 import { RefreshButton } from '../../components/RefreshButton';
 import { StaffActions } from '../../components/StaffActions';
 import { Alert } from '../../components/ui/Alert';
@@ -57,7 +59,7 @@ export function DoctorQueuePage() {
   if (error !== null && !data) {
     return (
       <>
-        <BackLink />
+        <BackLink to="/doctor" label="Lịch trực" />
         <LoadError error={error} onRetry={() => void refresh()} />
       </>
     );
@@ -73,13 +75,15 @@ export function DoctorQueuePage() {
   const finished = byStatus(...DONE);
   const next = appointments.find((a) => a.id === nextAppointmentId);
 
-  const card = (a: StaffAppointment, defaultExpanded = false) => (
+  const card = (a: StaffAppointment, emphasis?: 'current') => (
     <AppointmentCard
       key={a.id}
       appointment={a}
       title={a.patient.fullName}
       subtitle={a.reason || 'Không ghi lý do khám'}
-      defaultExpanded={defaultExpanded}
+      showDate={false}
+      defaultExpanded={emphasis === 'current'}
+      emphasis={emphasis}
       actions={<StaffActions appointment={a} onDone={handleDone} />}
     >
       <PatientInfo patient={a.patient} />
@@ -89,8 +93,8 @@ export function DoctorQueuePage() {
 
   return (
     <>
-      <BackLink />
       <PageHeader
+        back={{ to: '/doctor', label: 'Lịch trực' }}
         title={`Hàng đợi — ${shiftLabel(entry.shift.name)} (${entry.shift.startTime}–${entry.shift.endTime})`}
         subtitle={`${formatDateLong(entry.date)} · ${entry.room.name} · ${entry.specialty.name}. Tự động làm mới mỗi 15 giây.`}
         actions={<RefreshButton onClick={() => void refresh()} loading={loading} />}
@@ -109,25 +113,38 @@ export function DoctorQueuePage() {
 
       <div className="grid grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-start gap-6">
         {/* Left: call next + current patient */}
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <section className="rounded-xl bg-white p-5 ring-1 ring-slate-200">
             <Button
-              className="w-full py-3 text-base"
+              size="lg"
+              block
+              icon={MegaphoneIcon}
               disabled={nextAppointmentId === null}
               loading={calling}
               onClick={() => void callNext()}
             >
               Gọi bệnh nhân tiếp theo
             </Button>
-            <p className="mt-2 text-center text-sm text-slate-500">
-              {next
-                ? `Tiếp theo: STT ${next.queueNumber} — ${next.patient.fullName}`
-                : current
-                  ? 'Hoàn thành bệnh nhân đang khám để gọi người tiếp theo.'
-                  : elsewhere
-                    ? null
+            {next ? (
+              <div className="mt-4 flex items-center gap-4 rounded-lg bg-slate-25 p-3 ring-1 ring-slate-100 ring-inset">
+                <QueueNumber value={next.queueNumber} size="md" />
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-500">Tiếp theo</p>
+                  <p className="truncate font-medium text-slate-900">{next.patient.fullName}</p>
+                  <p className="truncate text-sm text-slate-500">
+                    {next.reason || 'Không ghi lý do khám'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              !elsewhere && (
+                <p className="mt-2 text-center text-sm text-slate-500">
+                  {current
+                    ? 'Hoàn thành bệnh nhân đang khám để gọi người tiếp theo.'
                     : 'Chưa có bệnh nhân nào đang chờ (đã check-in).'}
-            </p>
+                </p>
+              )
+            )}
             {elsewhere && (
               <div className="mt-3">
                 <Alert tone="info">
@@ -153,7 +170,7 @@ export function DoctorQueuePage() {
           <section>
             <SectionTitle>Đang khám</SectionTitle>
             {current ? (
-              <div className="rounded-xl ring-2 ring-violet-300">{card(current, true)}</div>
+              card(current, 'current')
             ) : (
               <p className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
                 Chưa có bệnh nhân đang khám.
@@ -163,23 +180,23 @@ export function DoctorQueuePage() {
         </div>
 
         {/* Right: the rest of the queue */}
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           <QueueSection
             title="Đang chờ (đã check-in)"
             items={waiting}
-            render={card}
+            render={(a) => card(a)}
             empty="Không có bệnh nhân đang chờ."
           />
           <QueueSection
             title="Chưa đến"
             items={notArrived}
-            render={card}
+            render={(a) => card(a)}
             empty="Tất cả bệnh nhân đã đến."
           />
           <QueueSection
             title="Đã xong"
             items={finished}
-            render={card}
+            render={(a) => card(a)}
             empty="Chưa có lượt khám nào kết thúc."
           />
         </div>
@@ -188,16 +205,8 @@ export function DoctorQueuePage() {
   );
 }
 
-function BackLink() {
-  return (
-    <Link to="/doctor" className="mb-3 inline-block text-sm text-brand-700 hover:underline">
-      ← Lịch trực
-    </Link>
-  );
-}
-
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <h2 className="mb-2 text-sm font-semibold text-slate-600">{children}</h2>;
+  return <h2 className="mb-2 text-sm font-semibold text-slate-700">{children}</h2>;
 }
 
 function QueueSection({
@@ -214,12 +223,12 @@ function QueueSection({
   return (
     <section>
       <SectionTitle>
-        {title} <span className="font-normal text-slate-400">({items.length})</span>
+        {title} <span className="font-normal text-slate-500">({items.length})</span>
       </SectionTitle>
       {items.length === 0 ? (
-        <p className="text-sm text-slate-400">{empty}</p>
+        <p className="text-sm text-slate-500">{empty}</p>
       ) : (
-        <div className="space-y-2">{items.map((a) => render(a))}</div>
+        <div className="flex flex-col gap-2">{items.map((a) => render(a))}</div>
       )}
     </section>
   );

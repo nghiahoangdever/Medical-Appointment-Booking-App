@@ -1,9 +1,14 @@
+import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { doctorName, shiftLabel } from '../i18n/labels';
 import { formatDate, formatDateTime, formatDayMonth, weekdayShort } from '../lib/date';
-import type { Appointment } from '../types';
+import type { Appointment, AppointmentStatus } from '../types';
+import { QueueNumber } from './QueueNumber';
 import { StatusBadge } from './StatusBadge';
+
+/** Statuses whose queue ticket is shown muted (the visit is over). */
+const FINISHED: AppointmentStatus[] = ['COMPLETED', 'CANCELLED', 'NO_SHOW'];
 
 interface AppointmentCardProps {
   appointment: Appointment;
@@ -11,6 +16,10 @@ interface AppointmentCardProps {
   title?: ReactNode;
   subtitle?: ReactNode;
   defaultExpanded?: boolean;
+  /** Show the date tile in the summary (off for staff day/shift views where the date is fixed). */
+  showDate?: boolean;
+  /** "current" = the patient in examination: a stronger ring. */
+  emphasis?: 'current';
   /** Extra details shown when expanded (e.g. patient info and notes for staff). */
   children?: ReactNode;
   /** Buttons/forms for the actions this viewer may take, shown when expanded. */
@@ -23,6 +32,8 @@ export function AppointmentCard({
   title,
   subtitle,
   defaultExpanded = false,
+  showDate = true,
+  emphasis,
   children,
   actions,
 }: AppointmentCardProps) {
@@ -30,54 +41,54 @@ export function AppointmentCard({
   const panelId = useId();
 
   return (
-    <article className="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
+    <article
+      className={`overflow-hidden rounded-xl bg-white ${
+        emphasis === 'current' ? 'ring-2 ring-st-inexam-ring' : 'ring-1 ring-slate-200'
+      }`}
+    >
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
         aria-expanded={expanded}
         aria-controls={panelId}
-        className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-slate-50"
+        className={`grid w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-150 hover:bg-slate-25 focus-visible:-outline-offset-2 ${
+          showDate
+            ? 'grid-cols-[auto_auto_minmax(0,1fr)_auto_auto]'
+            : 'grid-cols-[auto_minmax(0,1fr)_auto_auto]'
+        }`}
       >
-        <div className="w-14 shrink-0 rounded-lg bg-brand-50 py-1.5 text-center text-brand-800">
-          <div className="text-xs font-medium">{weekdayShort(a.date)}</div>
-          <div className="text-sm font-semibold">{formatDayMonth(a.date)}</div>
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-slate-900">{title ?? a.specialty.name}</p>
-          <p className="truncate text-sm text-slate-500">
+        {showDate && (
+          <span className="w-14 rounded-lg bg-brand-50 py-1.5 text-center text-brand-800">
+            <span className="block text-xs font-medium">{weekdayShort(a.date)}</span>
+            <span className="tabular block text-sm font-semibold">{formatDayMonth(a.date)}</span>
+          </span>
+        )}
+        <QueueNumber value={a.queueNumber} size="sm" muted={FINISHED.includes(a.status)} />
+        <span className="min-w-0">
+          <span className="block truncate font-medium text-slate-900">
+            {title ?? a.specialty.name}
+          </span>
+          <span className="block truncate text-sm text-slate-500">
             {subtitle ?? (
               <>
                 {doctorName(a.doctor)} · {shiftLabel(a.shift.name)} {a.shift.startTime}–
                 {a.shift.endTime}
               </>
             )}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
-          <span className="text-sm text-slate-500">
-            STT <span className="font-semibold text-slate-900">{a.queueNumber}</span>
           </span>
-          <StatusBadge status={a.status} />
-        </div>
-        <svg
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className={`size-5 shrink-0 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+        </span>
+        <StatusBadge status={a.status} />
+        <ChevronDownIcon
           aria-hidden="true"
-        >
-          <path
-            fillRule="evenodd"
-            d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-            clipRule="evenodd"
-          />
-        </svg>
+          className={`size-5 text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {expanded && (
-        <div id={panelId} className="space-y-4 border-t border-slate-100 px-4 py-4">
-          <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <div id={panelId} className="flex flex-col gap-4 border-t border-slate-100 p-4">
+          <dl className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,200px),1fr))] gap-x-6 gap-y-3 text-sm">
             <Detail label="Mã lịch hẹn">
-              <span className="font-mono font-semibold tracking-wide">{a.code}</span>
+              <span className="code-text">{a.code}</span>
             </Detail>
             <Detail label="Số thứ tự">{a.queueNumber}</Detail>
             <Detail label="Ngày khám">{formatDate(a.date)}</Detail>
@@ -111,7 +122,7 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="mt-0.5 text-slate-900">{children}</dd>
+      <dd className="mt-0.5 break-words text-slate-900">{children}</dd>
     </div>
   );
 }

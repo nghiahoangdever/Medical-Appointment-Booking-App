@@ -99,7 +99,7 @@ export function ReceptionPage({
         actions={<RefreshButton onClick={() => void refresh()} loading={loading} />}
       />
 
-      <div className="mb-4 space-y-4 rounded-xl bg-white p-4 ring-1 ring-slate-200">
+      <div className="mb-4 flex flex-col gap-4 rounded-xl bg-white p-4 ring-1 ring-slate-200">
         <div className="flex flex-wrap items-end justify-between gap-4">
           {query ? (
             <p className="text-sm text-slate-700">
@@ -110,17 +110,18 @@ export function ReceptionPage({
           )}
           <form
             onSubmit={handleSearch}
-            className="flex w-full items-end gap-2 sm:w-auto"
+            className="flex flex-[0_1_440px] items-end gap-2"
             role="search"
           >
-            <TextField
-              label="Tìm theo mã lịch hẹn hoặc số điện thoại"
-              placeholder="VD: AP-7K3QXM hoặc 0912…"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              maxLength={50}
-              className="sm:w-72"
-            />
+            <div className="min-w-0 flex-1">
+              <TextField
+                label="Tìm theo mã lịch hẹn hoặc số điện thoại"
+                placeholder="VD: AP-7K3QXM hoặc 0912…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                maxLength={50}
+              />
+            </div>
             <Button type="submit" disabled={!searchInput.trim()}>
               Tìm
             </Button>
@@ -132,7 +133,7 @@ export function ReceptionPage({
           </form>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-3">
           <SelectField
             label="Ca khám"
             value={shiftId}
@@ -194,16 +195,17 @@ export function ReceptionPage({
           }
         />
       ) : (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           {groups.map((group) => (
             <section key={group.key}>
-              <h2 className="mb-2 text-sm font-semibold text-slate-600">{group.title}</h2>
-              <div className="space-y-2">
+              <h2 className="mb-2 text-sm font-semibold text-slate-700">{group.title}</h2>
+              <div className="flex flex-col gap-2">
                 {group.appointments.map((a) => (
                   <AppointmentCard
                     key={a.id}
                     appointment={a}
                     title={a.patient.fullName}
+                    showDate={query !== ''}
                     subtitle={`${a.specialty.name} · ${doctorName(a.doctor)} · Phòng ${a.room.code}`}
                     actions={<StaffActions appointment={a} onDone={handleDone} />}
                   >

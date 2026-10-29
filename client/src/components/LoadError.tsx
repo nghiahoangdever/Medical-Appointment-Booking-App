@@ -1,3 +1,4 @@
+import { ArrowPathIcon } from '@heroicons/react/20/solid';
 import { errorMessage } from '../i18n/errors';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
@@ -9,7 +10,7 @@ export function LoadError({ error, onRetry }: { error: unknown; onRetry?: () => 
       <div className="flex items-center justify-between gap-4">
         <span>{errorMessage(error)}</span>
         {onRetry && (
-          <Button variant="secondary" onClick={onRetry} className="shrink-0">
+          <Button variant="secondary" size="sm" icon={ArrowPathIcon} onClick={onRetry}>
             Thử lại
           </Button>
         )}

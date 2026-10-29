@@ -12,7 +12,16 @@ import { useSubmit } from '../../hooks/useSubmit';
 import { errorMessage, fieldErrorMessages } from '../../i18n/errors';
 import { doctorName } from '../../i18n/labels';
 import type { AdminDoctor } from '../../types';
-import { ActiveBadge, EmptyRow, ListWithForm, RowAction, Td, Th } from './shared';
+import {
+  ActiveBadge,
+  Caption,
+  EmptyRow,
+  ListWithForm,
+  RowAction,
+  SELECTED_ROW,
+  Td,
+  Th,
+} from './shared';
 
 const EMPTY = {
   fullName: '',
@@ -101,6 +110,7 @@ export function DoctorsPage() {
       <ListWithForm
         list={
           <table className="w-full">
+            <Caption>Danh sách bác sĩ</Caption>
             <thead>
               <tr>
                 <Th>Bác sĩ</Th>
@@ -110,7 +120,7 @@ export function DoctorsPage() {
                 <Th />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {doctors.length === 0 && (
                 <EmptyRow
                   colSpan={5}
@@ -118,7 +128,7 @@ export function DoctorsPage() {
                 />
               )}
               {doctors.map((d) => (
-                <tr key={d.id} className={editing?.id === d.id ? 'bg-brand-50/50' : undefined}>
+                <tr key={d.id} className={editing?.id === d.id ? SELECTED_ROW : undefined}>
                   <Td className="font-medium">{doctorName(d)}</Td>
                   <Td>{d.specialty.name}</Td>
                   <Td>
@@ -128,7 +138,7 @@ export function DoctorsPage() {
                   <Td>
                     <ActiveBadge isActive={d.isActive} />
                   </Td>
-                  <Td className="space-x-3 text-right whitespace-nowrap">
+                  <Td className="text-right whitespace-nowrap [&>button+button]:ml-3">
                     <RowAction onClick={() => edit(d)}>Sửa</RowAction>
                     <RowAction
                       tone={d.isActive ? 'danger' : 'default'}
@@ -144,8 +154,8 @@ export function DoctorsPage() {
           </table>
         }
         form={
-          <form onSubmit={submit} className="space-y-4" noValidate>
-            <h2 className="font-semibold text-slate-900">
+          <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+            <h2 className="text-base font-semibold text-slate-900">
               {editing ? `Sửa: ${doctorName(editing)}` : 'Thêm bác sĩ'}
             </h2>
             {save.error !== null && Object.keys(fieldErrors).length === 0 && (

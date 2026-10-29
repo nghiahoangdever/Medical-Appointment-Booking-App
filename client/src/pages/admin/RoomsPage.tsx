@@ -11,7 +11,16 @@ import { useApi } from '../../hooks/useApi';
 import { useSubmit } from '../../hooks/useSubmit';
 import { errorMessage, fieldErrorMessages } from '../../i18n/errors';
 import type { AdminRoom } from '../../types';
-import { ActiveBadge, EmptyRow, ListWithForm, RowAction, Td, Th } from './shared';
+import {
+  ActiveBadge,
+  Caption,
+  EmptyRow,
+  ListWithForm,
+  RowAction,
+  SELECTED_ROW,
+  Td,
+  Th,
+} from './shared';
 
 const EMPTY = { code: '', name: '', floor: '' };
 
@@ -75,6 +84,7 @@ export function RoomsPage() {
         <ListWithForm
           list={
             <table className="w-full">
+              <Caption>Danh sách phòng khám</Caption>
               <thead>
                 <tr>
                   <Th>Mã phòng</Th>
@@ -84,7 +94,7 @@ export function RoomsPage() {
                   <Th />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {data.length === 0 && (
                   <EmptyRow
                     colSpan={5}
@@ -92,14 +102,14 @@ export function RoomsPage() {
                   />
                 )}
                 {data.map((r) => (
-                  <tr key={r.id} className={editing?.id === r.id ? 'bg-brand-50/50' : undefined}>
-                    <Td className="font-mono font-medium">{r.code}</Td>
+                  <tr key={r.id} className={editing?.id === r.id ? SELECTED_ROW : undefined}>
+                    <Td className="code-text text-[13px]">{r.code}</Td>
                     <Td>{r.name}</Td>
                     <Td>{r.floor || '—'}</Td>
                     <Td>
                       <ActiveBadge isActive={r.isActive} />
                     </Td>
-                    <Td className="space-x-3 text-right whitespace-nowrap">
+                    <Td className="text-right whitespace-nowrap [&>button+button]:ml-3">
                       <RowAction onClick={() => edit(r)}>Sửa</RowAction>
                       <RowAction
                         tone={r.isActive ? 'danger' : 'default'}
@@ -115,8 +125,8 @@ export function RoomsPage() {
             </table>
           }
           form={
-            <form onSubmit={submit} className="space-y-4" noValidate>
-              <h2 className="font-semibold text-slate-900">
+            <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+              <h2 className="text-base font-semibold text-slate-900">
                 {editing ? `Sửa: ${editing.code}` : 'Thêm phòng khám'}
               </h2>
               {save.error !== null && Object.keys(fieldErrors).length === 0 && (

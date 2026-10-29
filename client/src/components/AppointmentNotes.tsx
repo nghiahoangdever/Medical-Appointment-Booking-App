@@ -45,16 +45,19 @@ export function AppointmentNotes({
 
   return (
     <section>
-      <h3 className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+      <h3 className="mb-2 text-xs font-semibold tracking-[0.05em] text-slate-500 uppercase">
         Ghi chú nội bộ
       </h3>
       {appointment.notes.length === 0 ? (
         <p className="mb-3 text-sm text-slate-500">Chưa có ghi chú.</p>
       ) : (
-        <ul className="mb-3 space-y-2">
+        <ul className="mb-3 flex flex-col gap-2">
           {appointment.notes.map((note) => (
-            <li key={note.id} className="rounded-lg bg-amber-50/60 px-3 py-2 ring-1 ring-amber-100">
-              <p className="text-sm whitespace-pre-line text-slate-800">{note.content}</p>
+            <li
+              key={note.id}
+              className="rounded-lg bg-nghe-50 px-3 py-2 ring-1 ring-nghe-100 ring-inset"
+            >
+              <p className="text-sm whitespace-pre-line text-slate-900">{note.content}</p>
               <p className="mt-1 text-xs text-slate-500">
                 {note.author.fullName} ({ROLE_LABEL[note.author.role]}) ·{' '}
                 {formatDateTime(note.createdAt)}

@@ -50,17 +50,22 @@ export function CancelAppointment<T extends Appointment>({
   }
 
   return (
-    <div className="w-full space-y-3 rounded-lg bg-red-50/50 p-3 ring-1 ring-red-100">
-      <p className="text-sm font-medium text-slate-800">Bạn chắc chắn muốn hủy lịch hẹn này?</p>
+    <div
+      role="group"
+      aria-label="Xác nhận hủy lịch hẹn"
+      className="flex w-full flex-col gap-3 rounded-lg bg-tone-error-bg p-3 ring-1 ring-tone-error-ring ring-inset"
+    >
+      <p className="text-sm font-medium text-slate-900">Bạn chắc chắn muốn hủy lịch hẹn này?</p>
       {error && <Alert>{error}</Alert>}
       <TextAreaField
         label="Lý do hủy (không bắt buộc)"
+        rows={2}
         maxLength={500}
         value={reason}
         onChange={(e) => setReason(e.target.value)}
       />
       <div className="flex flex-wrap gap-2">
-        <Button variant="danger" loading={submitting} onClick={() => void confirm()}>
+        <Button variant="danger" loading={submitting} onClick={() => void confirm()} autoFocus>
           Xác nhận hủy
         </Button>
         <Button variant="secondary" disabled={submitting} onClick={() => setConfirming(false)}>

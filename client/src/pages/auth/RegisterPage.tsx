@@ -81,14 +81,18 @@ export function RegisterPage() {
       footer={
         <>
           Đã có tài khoản?{' '}
-          <Link to="/login" className="font-medium text-brand-700 hover:underline">
+          <Link to="/login" className="font-medium">
             Đăng nhập
           </Link>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        {error && <Alert>{error}</Alert>}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        {error ? (
+          <Alert>{error}</Alert>
+        ) : (
+          Object.keys(fieldErrors).length > 0 && <Alert>{translateError('VALIDATION_ERROR')}</Alert>
+        )}
         <TextField
           label="Họ và tên"
           autoComplete="name"
@@ -96,7 +100,7 @@ export function RegisterPage() {
           onChange={(e) => set('fullName')(e.target.value)}
           error={fieldErrors.fullName}
         />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-4">
           <TextField
             label="Email"
             type="email"
@@ -114,7 +118,7 @@ export function RegisterPage() {
             error={fieldErrors.phone}
           />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-4">
           <TextField
             label="Ngày sinh"
             placeholder="dd/mm/yyyy"
@@ -139,7 +143,7 @@ export function RegisterPage() {
           onChange={(e) => set('address')(e.target.value)}
           error={fieldErrors.address}
         />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-4">
           <TextField
             label="Mật khẩu"
             type="password"
@@ -158,7 +162,7 @@ export function RegisterPage() {
             error={fieldErrors.confirmPassword}
           />
         </div>
-        <Button type="submit" loading={submitting} className="w-full">
+        <Button type="submit" loading={submitting} block>
           Tạo tài khoản
         </Button>
       </form>
