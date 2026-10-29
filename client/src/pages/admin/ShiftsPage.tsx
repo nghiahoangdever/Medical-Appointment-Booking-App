@@ -35,7 +35,7 @@ export function ShiftsPage() {
       {!data ? (
         !error && <PageSpinner />
       ) : (
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-6">
           {data.map((shift) => (
             <ShiftCard
               key={`${shift.id}-${shift.startTime}-${shift.endTime}`}
@@ -71,7 +71,7 @@ function ShiftCard({ shift, onSaved }: { shift: Shift; onSaved: () => void }) {
       className="space-y-4 rounded-xl bg-white p-5 ring-1 ring-slate-200"
       noValidate
     >
-      <h2 className="font-semibold text-slate-900">{shiftLabel(shift.name)}</h2>
+      <h2 className="text-base font-semibold text-slate-900">{shiftLabel(shift.name)}</h2>
       {saved && <Alert tone="success">Đã lưu giờ {shiftLabel(shift.name).toLowerCase()}.</Alert>}
       {save.error !== null && Object.keys(fieldErrors).length === 0 && (
         <Alert>{errorMessage(save.error)}</Alert>
@@ -80,6 +80,7 @@ function ShiftCard({ shift, onSaved }: { shift: Shift; onSaved: () => void }) {
         <TextField
           label="Bắt đầu"
           placeholder="HH:mm"
+          inputMode="numeric"
           value={times.startTime}
           onChange={(e) => setTimes({ ...times, startTime: e.target.value })}
           error={fieldErrors.startTime}
@@ -87,6 +88,7 @@ function ShiftCard({ shift, onSaved }: { shift: Shift; onSaved: () => void }) {
         <TextField
           label="Kết thúc"
           placeholder="HH:mm"
+          inputMode="numeric"
           value={times.endTime}
           onChange={(e) => setTimes({ ...times, endTime: e.target.value })}
           error={fieldErrors.endTime}

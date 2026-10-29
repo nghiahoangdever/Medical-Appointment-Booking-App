@@ -11,7 +11,16 @@ import { useApi } from '../../hooks/useApi';
 import { useSubmit } from '../../hooks/useSubmit';
 import { errorMessage, fieldErrorMessages } from '../../i18n/errors';
 import type { StaffAccount } from '../../types';
-import { ActiveBadge, EmptyRow, ListWithForm, RowAction, Td, Th } from './shared';
+import {
+  ActiveBadge,
+  Caption,
+  EmptyRow,
+  ListWithForm,
+  RowAction,
+  SELECTED_ROW,
+  Td,
+  Th,
+} from './shared';
 
 const EMPTY = { fullName: '', email: '', phone: '', password: '' };
 
@@ -79,6 +88,7 @@ export function ReceptionistsPage() {
         <ListWithForm
           list={
             <table className="w-full">
+              <Caption>Danh sách lễ tân</Caption>
               <thead>
                 <tr>
                   <Th>Họ và tên</Th>
@@ -88,7 +98,7 @@ export function ReceptionistsPage() {
                   <Th />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {data.length === 0 && (
                   <EmptyRow
                     colSpan={5}
@@ -96,14 +106,14 @@ export function ReceptionistsPage() {
                   />
                 )}
                 {data.map((u) => (
-                  <tr key={u.id} className={editing?.id === u.id ? 'bg-brand-50/50' : undefined}>
+                  <tr key={u.id} className={editing?.id === u.id ? SELECTED_ROW : undefined}>
                     <Td className="font-medium">{u.fullName}</Td>
                     <Td>{u.email}</Td>
                     <Td>{u.phone}</Td>
                     <Td>
                       <ActiveBadge isActive={u.isActive} />
                     </Td>
-                    <Td className="space-x-3 text-right whitespace-nowrap">
+                    <Td className="text-right whitespace-nowrap [&>button+button]:ml-3">
                       <RowAction onClick={() => edit(u)}>Sửa</RowAction>
                       <RowAction
                         tone={u.isActive ? 'danger' : 'default'}
@@ -119,8 +129,8 @@ export function ReceptionistsPage() {
             </table>
           }
           form={
-            <form onSubmit={submit} className="space-y-4" noValidate>
-              <h2 className="font-semibold text-slate-900">
+            <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+              <h2 className="text-base font-semibold text-slate-900">
                 {editing ? `Sửa: ${editing.fullName}` : 'Thêm tài khoản lễ tân'}
               </h2>
               {save.error !== null && Object.keys(fieldErrors).length === 0 && (

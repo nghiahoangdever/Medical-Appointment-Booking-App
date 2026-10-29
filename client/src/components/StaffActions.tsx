@@ -91,13 +91,24 @@ export function StaffActions({ appointment: a, onDone }: StaffActionsProps) {
             return (
               <div
                 key={action}
-                className="flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 ring-1 ring-rose-100"
+                role="group"
+                aria-label={config.confirm}
+                className="flex flex-wrap items-center gap-2 rounded-lg bg-tone-error-bg px-3 py-2 ring-1 ring-tone-error-ring ring-inset"
               >
-                <span className="text-sm text-slate-800">{config.confirm}</span>
-                <Button variant="danger" loading={busy === action} onClick={() => void run(action)}>
+                <span className="text-sm text-slate-900">{config.confirm}</span>
+                <Button
+                  variant="danger"
+                  loading={busy === action}
+                  onClick={() => void run(action)}
+                  autoFocus
+                >
                   Xác nhận
                 </Button>
-                <Button variant="secondary" onClick={() => setConfirming(null)}>
+                <Button
+                  variant="secondary"
+                  disabled={busy === action}
+                  onClick={() => setConfirming(null)}
+                >
                   Không
                 </Button>
               </div>

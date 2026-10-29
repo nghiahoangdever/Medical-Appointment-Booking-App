@@ -11,7 +11,16 @@ import { useApi } from '../../hooks/useApi';
 import { useSubmit } from '../../hooks/useSubmit';
 import { errorMessage, fieldErrorMessages } from '../../i18n/errors';
 import type { AdminSpecialty } from '../../types';
-import { ActiveBadge, EmptyRow, ListWithForm, RowAction, Td, Th } from './shared';
+import {
+  ActiveBadge,
+  Caption,
+  EmptyRow,
+  ListWithForm,
+  RowAction,
+  SELECTED_ROW,
+  Td,
+  Th,
+} from './shared';
 
 const EMPTY = { name: '', description: '' };
 
@@ -75,6 +84,7 @@ export function SpecialtiesPage() {
         <ListWithForm
           list={
             <table className="w-full">
+              <Caption>Danh sách chuyên khoa</Caption>
               <thead>
                 <tr>
                   <Th>Tên chuyên khoa</Th>
@@ -84,7 +94,7 @@ export function SpecialtiesPage() {
                   <Th />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {data.length === 0 && (
                   <EmptyRow
                     colSpan={5}
@@ -92,14 +102,14 @@ export function SpecialtiesPage() {
                   />
                 )}
                 {data.map((s) => (
-                  <tr key={s.id} className={editing?.id === s.id ? 'bg-brand-50/50' : undefined}>
+                  <tr key={s.id} className={editing?.id === s.id ? SELECTED_ROW : undefined}>
                     <Td className="font-medium">{s.name}</Td>
-                    <Td className="text-slate-500">{s.description || '—'}</Td>
-                    <Td className="text-right tabular-nums">{s.activeDoctorCount}</Td>
+                    <Td className="max-w-80 text-slate-700">{s.description || '—'}</Td>
+                    <Td className="tabular text-right">{s.activeDoctorCount}</Td>
                     <Td>
                       <ActiveBadge isActive={s.isActive} />
                     </Td>
-                    <Td className="space-x-3 text-right whitespace-nowrap">
+                    <Td className="text-right whitespace-nowrap [&>button+button]:ml-3">
                       <RowAction onClick={() => edit(s)}>Sửa</RowAction>
                       <RowAction
                         tone={s.isActive ? 'danger' : 'default'}
@@ -115,8 +125,8 @@ export function SpecialtiesPage() {
             </table>
           }
           form={
-            <form onSubmit={submit} className="space-y-4" noValidate>
-              <h2 className="font-semibold text-slate-900">
+            <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+              <h2 className="text-base font-semibold text-slate-900">
                 {editing ? `Sửa: ${editing.name}` : 'Thêm chuyên khoa'}
               </h2>
               {save.error !== null && Object.keys(fieldErrors).length === 0 && (

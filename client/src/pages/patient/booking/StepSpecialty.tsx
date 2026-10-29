@@ -25,7 +25,7 @@ export function StepSpecialty({ selectedId, onSelect }: StepSpecialtyProps) {
       {data.length === 0 ? (
         <EmptyState message="Hiện chưa có chuyên khoa nào nhận đặt lịch. Vui lòng quay lại sau." />
       ) : (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-3">
           {data.map((s) => (
             <ChoiceCard key={s.id} selected={s.id === selectedId} onClick={() => onSelect(s)}>
               <p className="font-medium text-slate-900">{s.name}</p>

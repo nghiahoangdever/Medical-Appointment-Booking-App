@@ -53,13 +53,13 @@ export function LoginPage() {
       footer={
         <>
           Bệnh nhân mới?{' '}
-          <Link to="/register" className="font-medium text-brand-700 hover:underline">
+          <Link to="/register" className="font-medium">
             Tạo tài khoản
           </Link>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {/* Why the previous session ended (expired / deactivated), until the next attempt. */}
         {sessionEndedReason && !error && (
           <Alert tone="info">{translateError(sessionEndedReason)}</Alert>
@@ -80,20 +80,20 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           error={fieldErrors.password}
         />
-        <Button type="submit" loading={submitting} className="w-full">
+        <Button type="submit" loading={submitting} block>
           Đăng nhập
         </Button>
       </form>
 
       {import.meta.env.DEV && (
-        <div className="mt-6 border-t border-slate-100 pt-4 text-xs text-slate-500">
+        <div className="mt-6 rounded-lg bg-slate-25 p-3 text-xs text-slate-500 ring-1 ring-slate-100">
           <p className="mb-2 font-medium">Tài khoản dùng thử (mật khẩu: password123)</p>
           <ul className="space-y-1">
             {DEMO_ACCOUNTS.map(([role, email]) => (
               <li key={email}>
                 <button
                   type="button"
-                  className="text-left hover:text-brand-700"
+                  className="rounded text-left hover:text-brand-700"
                   onClick={() => {
                     setIdentifier(email);
                     setPassword('password123');

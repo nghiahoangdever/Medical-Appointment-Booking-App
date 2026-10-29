@@ -1,3 +1,4 @@
+import { TrashIcon } from '@heroicons/react/20/solid';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { adminApi } from '../../../api/admin';
@@ -31,16 +32,21 @@ export function RosterEntryPanel({ week, cell, onChanged, onClose }: RosterEntry
   const title = `${formatDateLong(cell.date)} · ${shift ? shiftLabel(shift.name) : ''} · Phòng ${room?.code ?? ''}`;
 
   return (
-    <section className="rounded-xl bg-white p-5 ring-1 ring-slate-200">
+    <section
+      aria-label="Chi tiết ca trực"
+      className="rounded-xl bg-white p-5 ring-1 ring-slate-200"
+    >
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-semibold text-slate-900">{entry ? 'Ca trực' : 'Thêm ca trực'}</h2>
+          <h2 className="text-base font-semibold text-slate-900">
+            {entry ? 'Ca trực' : 'Thêm ca trực'}
+          </h2>
           <p className="text-sm text-slate-500">{title}</p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="text-sm text-slate-500 hover:text-slate-800"
+          className="rounded text-sm text-slate-500 hover:text-slate-900"
         >
           Đóng
         </button>
@@ -168,10 +174,10 @@ function EditEntry({
 
   return (
     <div className="space-y-4">
-      <dl className="grid grid-cols-4 gap-4 text-sm">
+      <dl className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,160px),1fr))] gap-x-6 gap-y-3 text-sm">
         <Info label="Bác sĩ">
           {doctorName(entry.doctor)}
-          {!entry.doctor.isActive && <span className="ml-1 text-rose-600">(ngừng hoạt động)</span>}
+          {!entry.doctor.isActive && <span className="ml-1 text-danger">(ngừng hoạt động)</span>}
         </Info>
         <Info label="Chuyên khoa">{entry.doctor.specialty.name}</Info>
         <Info label="Đã đặt / tối đa">
@@ -232,17 +238,30 @@ function EditEntry({
           )}
           {entry.deletable ? (
             confirmDelete ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-800">Xóa ca trực này?</span>
-                <Button variant="danger" loading={remove.busy} onClick={() => void doDelete()}>
+              <div
+                role="group"
+                aria-label="Xóa ca trực này?"
+                className="inline-flex flex-wrap items-center gap-2 rounded-lg bg-tone-error-bg px-3 py-2 ring-1 ring-tone-error-ring ring-inset"
+              >
+                <span className="text-sm text-slate-900">Xóa ca trực này?</span>
+                <Button
+                  variant="danger"
+                  loading={remove.busy}
+                  onClick={() => void doDelete()}
+                  autoFocus
+                >
                   Xóa
                 </Button>
-                <Button variant="secondary" onClick={() => setConfirmDelete(false)}>
+                <Button
+                  variant="secondary"
+                  disabled={remove.busy}
+                  onClick={() => setConfirmDelete(false)}
+                >
                   Không
                 </Button>
               </div>
             ) : (
-              <Button variant="secondary" onClick={() => setConfirmDelete(true)}>
+              <Button variant="secondary" icon={TrashIcon} onClick={() => setConfirmDelete(true)}>
                 Xóa ca trực
               </Button>
             )

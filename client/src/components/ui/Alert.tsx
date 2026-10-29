@@ -1,9 +1,27 @@
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+} from '@heroicons/react/20/solid';
 import type { ReactNode } from 'react';
 
 const TONES = {
-  error: 'bg-red-50 text-red-800 ring-red-200',
-  info: 'bg-sky-50 text-sky-800 ring-sky-200',
-  success: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+  error: {
+    cls: 'bg-tone-error-bg text-tone-error-fg ring-tone-error-ring',
+    Icon: ExclamationTriangleIcon,
+  },
+  info: {
+    cls: 'bg-tone-info-bg text-tone-info-fg ring-tone-info-ring',
+    Icon: InformationCircleIcon,
+  },
+  success: {
+    cls: 'bg-tone-success-bg text-tone-success-fg ring-tone-success-ring',
+    Icon: CheckCircleIcon,
+  },
+  warning: {
+    cls: 'bg-tone-warning-bg text-tone-warning-fg ring-tone-warning-ring',
+    Icon: ExclamationTriangleIcon,
+  },
 };
 
 export function Alert({
@@ -13,12 +31,14 @@ export function Alert({
   tone?: keyof typeof TONES;
   children: ReactNode;
 }) {
+  const { cls, Icon } = TONES[tone];
   return (
     <div
       role={tone === 'error' ? 'alert' : 'status'}
-      className={`rounded-lg px-3 py-2 text-sm ring-1 ${TONES[tone]}`}
+      className={`flex items-start gap-2 rounded-lg px-4 py-3 text-sm ring-1 ring-inset ${cls}`}
     >
-      {children}
+      <Icon aria-hidden="true" className="size-5 shrink-0" />
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }

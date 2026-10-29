@@ -56,7 +56,11 @@ export function MyAppointmentsPage() {
         }
       />
 
-      <div className="mb-4 flex gap-1 border-b border-slate-200" role="tablist">
+      <div
+        className="mb-4 flex gap-1 border-b border-slate-200"
+        role="tablist"
+        aria-label="Lịch hẹn"
+      >
         <TabButton active={tab === 'upcoming'} onClick={() => setTab('upcoming')}>
           Sắp tới ({upcoming.length})
         </TabButton>
@@ -89,7 +93,7 @@ export function MyAppointmentsPage() {
           }
         />
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {shown.map((a) => (
             <AppointmentCard
               key={a.id}
@@ -114,12 +118,17 @@ function PatientActions({
   // BOOKED but the server no longer allows CANCEL → the shift has started.
   if (appointment.status === 'BOOKED' && !appointment.allowedActions.includes('CANCEL')) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="border-t border-slate-100 pt-4 text-sm text-slate-500">
         Ca khám đã bắt đầu nên không thể hủy trực tuyến. Vui lòng liên hệ quầy lễ tân.
       </p>
     );
   }
-  return <CancelAppointment appointment={appointment} onCancelled={onCancelled} />;
+  if (!appointment.allowedActions.includes('CANCEL')) return null;
+  return (
+    <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+      <CancelAppointment appointment={appointment} onCancelled={onCancelled} />
+    </div>
+  );
 }
 
 function TabButton({
@@ -137,10 +146,10 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${
+      className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors duration-150 ${
         active
           ? 'border-brand-600 text-brand-700'
-          : 'border-transparent text-slate-500 hover:text-slate-800'
+          : 'border-transparent text-slate-500 hover:text-slate-900'
       }`}
     >
       {children}

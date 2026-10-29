@@ -1,4 +1,6 @@
+import { CheckIcon } from '@heroicons/react/20/solid';
 import { Link } from 'react-router';
+import { QueueNumber } from '../../../components/QueueNumber';
 import { Button } from '../../../components/ui/Button';
 import { doctorName, shiftLabel } from '../../../i18n/labels';
 import { formatDateLong } from '../../../lib/date';
@@ -13,28 +15,20 @@ export function BookingSuccess({
   onBookAnother: () => void;
 }) {
   return (
-    <section className="mx-auto max-w-lg rounded-2xl bg-white p-6 text-center ring-1 ring-slate-200">
-      <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-emerald-100 text-emerald-700">
-        <svg viewBox="0 0 20 20" fill="currentColor" className="size-6" aria-hidden="true">
-          <path
-            fillRule="evenodd"
-            d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-            clipRule="evenodd"
-          />
-        </svg>
+    <section className="mx-auto max-w-2xl rounded-2xl bg-white p-8 text-center ring-1 ring-slate-200">
+      <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-tone-success-bg text-tone-success-fg">
+        <CheckIcon aria-hidden="true" className="size-6" />
       </div>
-      <h2 className="text-xl font-semibold text-slate-900">Đặt lịch thành công!</h2>
+      <h2 role="status" className="text-xl font-semibold text-slate-900">
+        Đặt lịch thành công!
+      </h2>
 
-      <div className="my-5 grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-slate-50 p-3">
+      <div className="my-5 flex flex-wrap items-center justify-center gap-5">
+        <QueueNumber value={a.queueNumber} size="lg" label="Số thứ tự" />
+        <div className="text-left">
           <p className="text-xs text-slate-500">Mã lịch hẹn</p>
-          <p className="mt-1 font-mono text-xl font-semibold tracking-wider text-slate-900">
-            {a.code}
-          </p>
-        </div>
-        <div className="rounded-xl bg-brand-50 p-3">
-          <p className="text-xs text-brand-700">Số thứ tự</p>
-          <p className="mt-1 text-xl font-semibold text-brand-800">{a.queueNumber}</p>
+          <p className="code-text mt-1 text-xl text-slate-900">{a.code}</p>
+          <p className="mt-3 text-xs text-slate-500">Đọc mã này tại quầy lễ tân</p>
         </div>
       </div>
 
@@ -63,9 +57,9 @@ export function BookingSuccess({
         Vui lòng đến quầy lễ tân trước giờ bắt đầu ca khám và đọc mã lịch hẹn để check-in.
       </p>
 
-      <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
         <Link to="/patient" state={{ bookedId: a.id }}>
-          <Button className="w-full">Xem lịch hẹn của tôi</Button>
+          <Button>Xem lịch hẹn của tôi</Button>
         </Link>
         <Button variant="secondary" onClick={onBookAnother}>
           Đặt thêm lịch khác

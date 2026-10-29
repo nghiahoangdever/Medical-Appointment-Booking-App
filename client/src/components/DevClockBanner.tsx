@@ -1,3 +1,4 @@
+import { ClockIcon } from '@heroicons/react/20/solid';
 import { useEffect, useState } from 'react';
 import { http } from '../api/http';
 import { formatDateTime } from '../lib/date';
@@ -29,7 +30,11 @@ export function DevClockBanner() {
   if (offsetMs === null) return null;
   const serverNow = new Date(Date.now() + offsetMs).toISOString();
   return (
-    <div className="bg-amber-100 px-4 py-1.5 text-center text-xs text-amber-900">
+    <div
+      role="status"
+      className="flex items-center justify-center gap-1.5 border-b border-tone-warning-ring bg-tone-warning-bg px-4 py-1.5 text-xs text-tone-warning-fg"
+    >
+      <ClockIcon aria-hidden="true" className="size-4 shrink-0" />
       Chế độ thử nghiệm: máy chủ đang dùng giờ giả lập (DEV_FAKE_NOW) — hiện là{' '}
       <strong>{formatDateTime(serverNow)}</strong>
     </div>

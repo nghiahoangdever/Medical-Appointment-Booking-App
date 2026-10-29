@@ -1,3 +1,8 @@
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  DocumentDuplicateIcon,
+} from '@heroicons/react/20/solid';
 import { useCallback, useState } from 'react';
 import { adminApi } from '../../../api/admin';
 import { LoadError } from '../../../components/LoadError';
@@ -67,16 +72,19 @@ export function RosterPage() {
         actions={<RefreshButton onClick={() => void refresh()} loading={loading} />}
       />
 
-      <div className="mb-4 flex items-center justify-between gap-4 rounded-xl bg-white p-4 ring-1 ring-slate-200">
-        <div className="flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-white p-4 ring-1 ring-slate-200">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
+            square
+            icon={ChevronLeftIcon}
             aria-label="Tuần trước"
             onClick={() => goToWeek(addDays(weekStart, -7))}
+          />
+          <span
+            aria-live="polite"
+            className="min-w-[min(260px,calc(100vw-168px))] text-center text-base font-medium text-slate-900"
           >
-            ‹
-          </Button>
-          <span className="min-w-56 text-center font-medium text-slate-900">
             Tuần {formatDateRange(weekStart, addDays(weekStart, 6))}
             {weekStart === thisWeek && (
               <span className="ml-1 text-sm font-normal text-brand-700">(tuần này)</span>
@@ -84,33 +92,41 @@ export function RosterPage() {
           </span>
           <Button
             variant="secondary"
+            square
+            icon={ChevronRightIcon}
             aria-label="Tuần sau"
             onClick={() => goToWeek(addDays(weekStart, 7))}
-          >
-            ›
-          </Button>
+          />
           {weekStart !== thisWeek && (
-            <Button variant="secondary" onClick={() => goToWeek(thisWeek)}>
+            <Button variant="ghost" onClick={() => goToWeek(thisWeek)}>
               Tuần này
             </Button>
           )}
         </div>
         {confirmCopy ? (
-          <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 ring-1 ring-amber-200">
-            <span className="text-sm text-slate-800">
+          <div
+            role="group"
+            aria-label="Xác nhận sao chép tuần trước"
+            className="flex flex-wrap items-center gap-2 rounded-lg bg-tone-warning-bg px-3 py-2 ring-1 ring-tone-warning-ring ring-inset"
+          >
+            <span className="text-sm text-slate-900">
               Sao chép lịch trực tuần{' '}
               {formatDateRange(addDays(weekStart, -7), addDays(weekStart, -1))} sang tuần{' '}
               {formatDateRange(weekStart, addDays(weekStart, 6))}? Ca bị trùng sẽ được bỏ qua.
             </span>
-            <Button loading={copy.busy} onClick={() => void copyPreviousWeek()}>
+            <Button loading={copy.busy} onClick={() => void copyPreviousWeek()} autoFocus>
               Sao chép
             </Button>
-            <Button variant="secondary" onClick={() => setConfirmCopy(false)}>
+            <Button variant="secondary" disabled={copy.busy} onClick={() => setConfirmCopy(false)}>
               Hủy
             </Button>
           </div>
         ) : (
-          <Button variant="secondary" onClick={() => setConfirmCopy(true)}>
+          <Button
+            variant="secondary"
+            icon={DocumentDuplicateIcon}
+            onClick={() => setConfirmCopy(true)}
+          >
             Sao chép tuần trước
           </Button>
         )}
